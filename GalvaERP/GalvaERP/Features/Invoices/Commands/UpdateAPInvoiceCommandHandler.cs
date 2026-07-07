@@ -35,9 +35,7 @@ public class UpdateAPInvoiceCommandHandler : IRequestHandler<UpdateAPInvoiceComm
         }
 
         if (request.STS is not null) voucher.STS = request.STS;
-        if (request.Status is not null) voucher.Status = request.Status;
         if (request.Keterangan is not null) voucher.Keterangan = request.Keterangan;
-        if (request.Kode_Bank is not null) voucher.Kode_Bank = request.Kode_Bank;
 
         try
         {

@@ -20,16 +20,15 @@ public class GetInvoicesQueryHandler : IRequestHandler<GetInvoicesQuery, List<In
             from vap in _context.VoucherAPs.AsNoTracking()
             join s in _context.Suppliers.AsNoTracking() on vap.Kode_Supplier equals s.Kode into suppliers
             from s in suppliers.DefaultIfEmpty()
-            orderby vap.Tgl descending
+            orderby vap.TglDoku descending
             select new InvoiceListDto
             {
                 Doku = vap.Doku ?? string.Empty,
-                Tgl = vap.Tgl,
+                Tgl = vap.TglDoku,
                 Kode_Supplier = vap.Kode_Supplier,
                 SupplierName = s != null ? s.Nama : null,
                 Nilai = vap.Nilai,
                 STS = vap.STS,
-                Status = vap.Status,
                 ETag = vap.RowVersion != null ? Convert.ToBase64String(vap.RowVersion) : null,
             }
         ).ToListAsync(cancellationToken);

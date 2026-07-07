@@ -9,6 +9,7 @@ using GalvaERP.Features.GoodsReceipts;
 using GalvaERP.Features.Invoices;
 using GalvaERP.Features.MasterData;
 using GalvaERP.Features.Payments;
+using GalvaERP.Features.POConfirmations;
 using GalvaERP.Features.PurchaseOrders;
 using GalvaERP.Features.PurchaseRequisitions;
 using GalvaERP.Features.Push;
@@ -112,6 +113,12 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
+    options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+});
+
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehaviour<,>));
@@ -142,6 +149,7 @@ app.MapAuthEndpoints();
 app.MapMasterDataEndpoints();
 app.MapPurchaseRequisitionEndpoints();
 app.MapPurchaseOrderEndpoints();
+app.MapPOConfirmationEndpoints();
 app.MapGoodsReceiptEndpoints();
 app.MapAPInvoiceEndpoints();
 app.MapPaymentEndpoints();

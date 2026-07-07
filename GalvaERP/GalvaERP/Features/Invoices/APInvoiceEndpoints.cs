@@ -1,3 +1,4 @@
+using GalvaERP.Common.Web;
 using GalvaERP.Features.Invoices.Commands;
 using GalvaERP.Features.Invoices.Queries;
 using MediatR;
@@ -18,9 +19,9 @@ public static class APInvoiceEndpoints
             return Results.Ok(result);
         }).WithName("GetInvoices");
 
-        group.MapGet("/{doku}", async (string doku, IMediator mediator, HttpContext ctx, CancellationToken ct) =>
+        group.MapGet("/{*doku}", async (string doku, IMediator mediator, HttpContext ctx, CancellationToken ct) =>
         {
-            var result = await mediator.Send(new GetInvoiceByIdQuery(doku), ct);
+            var result = await mediator.Send(new GetInvoiceByIdQuery(RouteParams.Decode(doku)), ct);
             if (result is null) return Results.NotFound();
             if (result.ETag is not null)
                 ctx.Response.Headers["ETag"] = $"\"{result.ETag}\"";
@@ -44,11 +45,11 @@ public static class APInvoiceEndpoints
             }
         }).WithName("CreateAPInvoice");
 
-        group.MapPut("/{doku}", async (string doku, [FromBody] UpdateAPInvoiceCommand command, IMediator mediator, HttpContext ctx, CancellationToken ct) =>
+        group.MapPut("/{*doku}", async (string doku, [FromBody] UpdateAPInvoiceCommand command, IMediator mediator, HttpContext ctx, CancellationToken ct) =>
         {
             try
             {
-                var commandWithDoku = command with { Doku = doku };
+                var commandWithDoku = command with { Doku = RouteParams.Decode(doku) };
                 var result = await mediator.Send(commandWithDoku, ct);
                 if (result.ETag is not null)
                     ctx.Response.Headers["ETag"] = $"\"{result.ETag}\"";

@@ -11,29 +11,69 @@ public partial class SubBayar
 
     public DateTime? Tgl { get; set; }
 
-    public string? Doku_LPB { get; set; }
-
-    public string? Doku_PO { get; set; }
-
-    public string? Doku_Voucher { get; set; }
-
     public string? Kode_Supplier { get; set; }
 
-    public string? Kode_Brg { get; set; }
+    public string? Doku_Faktur { get; set; }
+
+    public string? Doku_LPB { get; set; }
+
+    public string? SuratJalan { get; set; }
+
+    public string? Giro { get; set; }
+
+    public DateTime? TglGiro { get; set; }
 
     public double? Nilai { get; set; }
 
-    public double? NilaiBayar { get; set; }
+    public double? DiskonTunai { get; set; }
 
-    public string? Kode_Valas { get; set; }
+    public double? TotalNilai { get; set; }
 
-    public double? Kurs { get; set; }
+    public string? Sts { get; set; }
+
+    public string? Doku_Muka { get; set; }
 
     public short? NoUrut { get; set; }
 
+    public string? Cara { get; set; }
+
+    public string? Kode_Valas { get; set; }
+
+    public string? Kode_ValasBayar { get; set; }
+
+    public double? NilaiLocal { get; set; }
+
+    public double? NilaiForeign { get; set; }
+
+    public double? Kurs { get; set; }
+
+    public double? KursBayar { get; set; }
+
+    public double? KursLocal { get; set; }
+
+    public double? KursKonversi { get; set; }
+
+    public string? Kode_Bank { get; set; }
+
+    public double? SelisihTagih { get; set; }
+
     public string? Keterangan { get; set; }
+
+    public string? Status { get; set; }
 
     public string? UserID { get; set; }
 
+    public string? Hapus { get; set; }
+
     public DateTime? EntryDate { get; set; }
+
+    public string? Kode_Dept { get; set; }
+
+    public string? Reference { get; set; }
+
+    public int? NoUrutDN { get; set; }
+
+    public string? ReferenceKasBank { get; set; }
+
+    public string? FakturPajak { get; set; }
 }

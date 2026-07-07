@@ -16,6 +16,7 @@ public static class PushEndpoints
         var group = app.MapGroup("/api/push").WithTags("Push").WithOpenApi();
 
         group.MapGet("/vapid-public-key", (IOptions<VapidOptions> vapid) => Results.Ok(new { publicKey = vapid.Value.PublicKey }))
+            .AllowAnonymous() // pre-login: client needs the public key to subscribe before auth
             .WithName("GetVapidPublicKey");
 
         group.MapPost("/subscribe", async (IMediator mediator, PushSubscriptionRequest request, HttpContext ctx, CancellationToken ct) =>

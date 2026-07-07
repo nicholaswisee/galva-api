@@ -60,17 +60,15 @@ public class CreateAPInvoiceCommandHandler : IRequestHandler<CreateAPInvoiceComm
         var voucher = new VoucherAP
         {
             Doku = doku,
-            Tgl = request.Tgl,
+            TglDoku = request.Tgl,
             Kode_Supplier = request.Kode_Supplier,
             Kode_Dept = request.Kode_Dept,
-            Kode_Bank = request.Kode_Bank,
             Nilai = request.Nilai,
             PPn = request.PPn,
             Diskon = request.Diskon,
             Misc = request.Misc,
             Keterangan = request.Keterangan,
             STS = "0",
-            Status = "Open",
             EntryDate = DateTime.UtcNow,
         };
 

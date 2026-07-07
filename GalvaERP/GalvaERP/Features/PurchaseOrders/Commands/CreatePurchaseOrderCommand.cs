@@ -10,4 +10,11 @@ public record CreatePurchaseOrderCommand(
     string Kode_dept,
     DateTime Tgl,
     string? Memo,
+    string Kode_Valas,
+    double Kurs,
+    double Ppn,
+    double Diskon,
+    double DppNilaiLain,
+    double PPnTunai,
+    short Syarat,
     List<POLineItemDto> LineItems) : IRequest<string>;

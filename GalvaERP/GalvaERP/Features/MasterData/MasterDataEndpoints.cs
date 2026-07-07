@@ -29,7 +29,7 @@ public static class MasterDataEndpoints
         group.MapGet("/inventory", async (AppDbContext context, CancellationToken ct) =>
             await context.Barangs
                 .AsNoTracking()
-                .Select(b => new { b.Kode, b.Nama })
+                .Select(b => new { b.Kode, b.Nama, b.Merk, b.Satuan, b.Harga })
                 .ToListAsync(ct))
             .WithName("GetInventory");
 

@@ -45,37 +45,61 @@ public class CreatePurchaseOrderCommandHandler : IRequestHandler<CreatePurchaseO
             Kode_Supplier = request.Kode_Supplier,
             Kode_dept = request.Kode_dept,
             Memo = request.Memo,
+            Kode_Valas = request.Kode_Valas,
+            Kurs = request.Kurs,
+            Syarat = request.Syarat,
             STS = "0",
-            PPN = 0d,
-            Diskon = 0d,
+            PPN = request.Ppn,
+            Diskon = request.Diskon,
+            DPPNilaiLain = request.DppNilaiLain,
+            PPnTunai = request.PPnTunai,
             EntryDate = DateTime.Now,
             Wkt = DateTime.Now
         };
 
-        double nilai = 0d;
+        double gross = 0d;
+        double disc = 0d;
         var subPos = new List<SubPO>();
 
         foreach (var line in request.LineItems)
         {
-            var lineTotal = line.Jumlah * line.Harga;
-            nilai += lineTotal;
+            var lineGross = line.Jumlah * line.Harga;
+            var lineDisc = line.Disc;
+            var lineNet = lineGross - lineDisc;
+
+            gross += lineGross;
+            disc += lineDisc;
 
             subPos.Add(new SubPO
             {
                 Doku = doku,
                 Kode_Brg = line.Kode_Brg,
+                Merk = line.Merk,
+                Model = line.Model,
+                Satuan = line.Satuan,
                 Jumlah = line.Jumlah,
                 Harga = line.Harga,
-                Total = lineTotal,
+                DiscPct = line.DiscPct,
+                Diskon = lineDisc,
+                Total = lineNet,
                 Kode_Gudang = line.Kode_Gudang,
                 Alias = line.Alias,
+                Keterangan = line.Note,
+                TglKirim = string.IsNullOrEmpty(line.Schedule) ? null : DateTime.Parse(line.Schedule),
+                Kode_Valas = line.Kode_Valas ?? request.Kode_Valas,
+                PPN = line.Ppn,
                 Kode_Dept = request.Kode_dept,
                 Tgl = request.Tgl,
                 EntryDate = DateTime.Now
             });
         }
 
-        po.Nilai = nilai;
+        var net = gross - disc;
+        var dpp = request.DppNilaiLain > 0 ? request.DppNilaiLain : net;
+        var vat = dpp * (request.Ppn / 100d);
+        var total = dpp + vat + request.PPnTunai;
+
+        po.Nilai = total;
 
         _context.POs.Add(po);
         _context.SubPOs.AddRange(subPos);

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Net.Http.Headers;
 using System.Threading;
+using GalvaERP.Common.Web;
 using GalvaERP.Features.PurchaseRequisitions.Commands;
 using GalvaERP.Features.PurchaseRequisitions.Queries;
 using MediatR;
@@ -23,9 +24,9 @@ public static class PurchaseRequisitionEndpoints
             return Results.Ok(list);
         }).WithName("GetPurchaseRequisitions");
 
-        group.MapGet("/{doku}", async (string doku, IMediator mediator, HttpContext ctx, CancellationToken ct) =>
+        group.MapGet("/{*doku}", async (string doku, IMediator mediator, HttpContext ctx, CancellationToken ct) =>
         {
-            var detail = await mediator.Send(new GetPurchaseRequisitionByIdQuery(doku), ct);
+            var detail = await mediator.Send(new GetPurchaseRequisitionByIdQuery(RouteParams.Decode(doku)), ct);
             if (detail is null)
             {
                 return Results.NotFound();
@@ -40,7 +41,7 @@ public static class PurchaseRequisitionEndpoints
             return Results.Created($"/api/purchase-requisitions/{doku}", new { Doku = doku });
         }).WithName("CreatePurchaseRequisition");
 
-        group.MapPut("/{doku}", async (string doku, HttpContext ctx, IMediator mediator, CancellationToken ct) =>
+        group.MapPut("/{*doku}", async (string doku, HttpContext ctx, IMediator mediator, CancellationToken ct) =>
         {
             if (!TryReadIfMatch(ctx, out var ifMatch, out var error))
             {
@@ -61,7 +62,7 @@ public static class PurchaseRequisitionEndpoints
             try
             {
                 var updated = await mediator.Send(
-                    body with { Doku = doku, IfMatchRowVersion = ifMatch }, ct);
+                    body with { Doku = RouteParams.Decode(doku), IfMatchRowVersion = ifMatch }, ct);
                 ctx.Response.Headers["ETag"] = $"\"{updated.ETag}\"";
                 return Results.Ok(updated);
             }

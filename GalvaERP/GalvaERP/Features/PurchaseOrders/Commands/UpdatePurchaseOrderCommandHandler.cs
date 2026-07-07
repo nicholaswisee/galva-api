@@ -69,9 +69,14 @@ public class UpdatePurchaseOrderCommandHandler : IRequestHandler<UpdatePurchaseO
                 fresh.Kode_Supplier,
                 SupplierName = s != null ? s.Nama : null,
                 fresh.Kode_dept,
+                fresh.Kode_Valas,
+                fresh.Kurs,
                 fresh.Nilai,
+                fresh.DPPNilaiLain,
                 fresh.PPN,
+                fresh.PPnTunai,
                 fresh.Diskon,
+                fresh.Syarat,
                 fresh.STS,
                 fresh.Memo,
                 fresh.RowVersion
@@ -79,17 +84,45 @@ public class UpdatePurchaseOrderCommandHandler : IRequestHandler<UpdatePurchaseO
 
         var refreshed = await query.FirstAsync(cancellationToken);
 
+        var lines = await _context.SubPOs
+            .AsNoTracking()
+            .Where(sp => sp.Doku == request.Doku)
+            .OrderBy(sp => sp.id_sub_po)
+            .Select(sp => new PODetailLineDto(
+                sp.id_sub_po,
+                sp.Kode_Brg,
+                sp.Merk,
+                sp.Model,
+                sp.Satuan,
+                sp.Jumlah,
+                sp.Harga,
+                sp.DiscPct,
+                sp.Diskon,
+                sp.Total,
+                sp.JumlahKonfirm ?? 0,
+                sp.Kode_Gudang,
+                sp.Alias,
+                sp.Keterangan,
+                sp.TglKirim.HasValue ? sp.TglKirim.Value.ToString("yyyy-MM-dd") : null))
+            .ToListAsync(cancellationToken);
+
         return new PODetailDto(
             refreshed.Doku ?? string.Empty,
             refreshed.Tgl,
             refreshed.Kode_Supplier,
             refreshed.SupplierName,
             refreshed.Kode_dept,
+            refreshed.Kode_Valas,
+            refreshed.Kurs,
             refreshed.Nilai,
+            refreshed.DPPNilaiLain,
             refreshed.PPN,
+            refreshed.PPnTunai,
             refreshed.Diskon,
+            refreshed.Syarat,
             refreshed.STS,
             refreshed.Memo,
-            Convert.ToBase64String(refreshed.RowVersion));
+            Convert.ToBase64String(refreshed.RowVersion),
+            lines);
     }
 }

@@ -40,7 +40,11 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<PO> POs { get; set; }
 
+    public virtual DbSet<POConfirmation> POConfirmations { get; set; }
+
     public virtual DbSet<SPB> SPBs { get; set; }
+
+    public virtual DbSet<SubPOConfirmation> SubPOConfirmations { get; set; }
 
     public virtual DbSet<SUBFAKTUR> SUBFAKTURs { get; set; }
 
@@ -172,8 +176,11 @@ public partial class AppDbContext : DbContext
                 .HasNoKey()
                 .ToTable("Barang");
 
+            entity.Property(e => e.Harga);
             entity.Property(e => e.Kode).HasMaxLength(50);
+            entity.Property(e => e.Merk).HasMaxLength(100);
             entity.Property(e => e.Nama).HasMaxLength(255);
+            entity.Property(e => e.Satuan).HasMaxLength(10);
         });
 
         modelBuilder.Entity<Bayar>(entity =>
@@ -215,14 +222,28 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.UserID).HasMaxLength(100);
         });
 
-        modelBuilder.Entity<Department>(entity =>
+modelBuilder.Entity<Department>(entity =>
         {
-            entity.HasKey(e => e.Kode).HasName("PK__Departme__706C7EE9F5B8A083");
+            entity.HasKey(e => e.id_dept).HasName("PK_Dept");
 
-            entity.ToTable("Department");
+            entity.ToTable("Dept");
 
             entity.Property(e => e.Kode).HasMaxLength(20);
-            entity.Property(e => e.Nama).HasMaxLength(100);
+            entity.Property(e => e.Nama).HasMaxLength(50);
+            entity.Property(e => e.KodeGTC).HasMaxLength(12);
+            entity.Property(e => e.KodeEPK).HasMaxLength(12);
+            entity.Property(e => e.NamaUser).HasMaxLength(50);
+            entity.Property(e => e.TglUpDate).HasColumnType("smalldatetime");
+            entity.Property(e => e.Head).HasMaxLength(35);
+            entity.Property(e => e.Chief).HasMaxLength(35);
+            entity.Property(e => e.Staff).HasMaxLength(35);
+            entity.Property(e => e.UserID).HasMaxLength(100);
+            entity.Property(e => e.Hapus).HasMaxLength(100);
+            entity.Property(e => e.EntryDate).HasColumnType("smalldatetime");
+            entity.Property(e => e.NewEPK).HasMaxLength(50);
+            entity.Property(e => e.dept_group).HasMaxLength(50);
+            entity.Property(e => e.NonAktifTime).HasColumnType("smalldatetime");
+            entity.Property(e => e.Kode_Master_Department).HasMaxLength(50);
         });
 
         modelBuilder.Entity<Faktur>(entity =>
@@ -551,6 +572,32 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Wkt).HasColumnType("smalldatetime");
         });
 
+        modelBuilder.Entity<POConfirmation>(entity =>
+        {
+            entity.HasKey(e => e.id_po_confirmation);
+
+            entity.ToTable("POConfirmation");
+
+            entity.Property(e => e.ContactPr).HasMaxLength(40);
+            entity.Property(e => e.Diskon);
+            entity.Property(e => e.Doku).HasMaxLength(50);
+            entity.Property(e => e.Doku_PO).HasMaxLength(50);
+            entity.Property(e => e.EntryDate).HasColumnType("smalldatetime");
+            entity.Property(e => e.Etd).HasColumnType("smalldatetime");
+            entity.Property(e => e.Kode_Supplier).HasMaxLength(12);
+            entity.Property(e => e.Kode_Valas).HasMaxLength(12);
+            entity.Property(e => e.Kode_dept).HasMaxLength(12);
+            entity.Property(e => e.Memo).HasColumnType("text");
+            entity.Property(e => e.Nilai);
+            entity.Property(e => e.PPN);
+            entity.Property(e => e.Psd).HasColumnType("smalldatetime");
+            entity.Property(e => e.RowVersion)
+                .IsRowVersion()
+                .IsConcurrencyToken();
+            entity.Property(e => e.STS).HasMaxLength(3);
+            entity.Property(e => e.Tgl).HasColumnType("smalldatetime");
+        });
+
         modelBuilder.Entity<SPB>(entity =>
         {
             entity.HasKey(e => e.id_spb);
@@ -717,23 +764,35 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.UserID).HasMaxLength(100);
         });
 
-        modelBuilder.Entity<SubBayar>(entity =>
+modelBuilder.Entity<SubBayar>(entity =>
         {
-            entity.HasKey(e => e.PKbas).HasName("PK__SubBayar__F4637C5A7FDC2199");
+            entity.HasKey(e => e.PKbas).HasName("PK_SubBayar");
 
             entity.ToTable("SubBayar");
 
             entity.Property(e => e.Doku).HasMaxLength(50);
+            entity.Property(e => e.Kode_Supplier).HasMaxLength(20);
+            entity.Property(e => e.Doku_Faktur).HasMaxLength(50);
             entity.Property(e => e.Doku_LPB).HasMaxLength(50);
-            entity.Property(e => e.Doku_PO).HasMaxLength(50);
-            entity.Property(e => e.Doku_Voucher).HasMaxLength(50);
-            entity.Property(e => e.EntryDate).HasColumnType("smalldatetime");
-            entity.Property(e => e.Keterangan).HasMaxLength(255);
-            entity.Property(e => e.Kode_Brg).HasMaxLength(50);
-            entity.Property(e => e.Kode_Supplier).HasMaxLength(50);
-            entity.Property(e => e.Kode_Valas).HasMaxLength(12);
-            entity.Property(e => e.Tgl).HasColumnType("smalldatetime");
+            entity.Property(e => e.SuratJalan).HasMaxLength(50);
+            entity.Property(e => e.Giro).HasMaxLength(25);
+            entity.Property(e => e.TglGiro).HasColumnType("smalldatetime");
+            entity.Property(e => e.Sts).HasMaxLength(1);
+            entity.Property(e => e.Doku_Muka).HasMaxLength(50);
+            entity.Property(e => e.Cara).HasMaxLength(100);
+            entity.Property(e => e.Kode_Valas).HasMaxLength(10);
+            entity.Property(e => e.Kode_ValasBayar).HasMaxLength(10);
+            entity.Property(e => e.Kode_Bank).HasMaxLength(20);
+            entity.Property(e => e.Keterangan).HasMaxLength(100);
+            entity.Property(e => e.Status).HasMaxLength(1);
             entity.Property(e => e.UserID).HasMaxLength(100);
+            entity.Property(e => e.Hapus).HasMaxLength(100);
+            entity.Property(e => e.EntryDate).HasColumnType("smalldatetime");
+            entity.Property(e => e.Kode_Dept).HasMaxLength(10);
+            entity.Property(e => e.Reference).HasMaxLength(20);
+            entity.Property(e => e.ReferenceKasBank).HasMaxLength(50);
+            entity.Property(e => e.FakturPajak).HasMaxLength(30);
+            entity.Property(e => e.Tgl).HasColumnType("smalldatetime");
         });
 
         modelBuilder.Entity<SubLPB>(entity =>
@@ -775,7 +834,7 @@ public partial class AppDbContext : DbContext
 
             entity.ToTable("SubPO");
 
-            entity.Property(e => e.Alias).HasMaxLength(20);
+            entity.Property(e => e.Alias).HasMaxLength(255);
             entity.Property(e => e.Doku).HasMaxLength(50);
             entity.Property(e => e.Doku_LPB).HasMaxLength(12);
             entity.Property(e => e.Doku_POSem).HasMaxLength(50);
@@ -793,6 +852,9 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Kode_Valas).HasMaxLength(10);
             entity.Property(e => e.Major).HasMaxLength(20);
             entity.Property(e => e.Model).HasMaxLength(255);
+            entity.Property(e => e.Merk).HasMaxLength(100);
+            entity.Property(e => e.Satuan).HasMaxLength(10);
+            entity.Property(e => e.DiscPct);
             entity.Property(e => e.Ref).HasMaxLength(20);
             entity.Property(e => e.TGL_LPB).HasColumnType("smalldatetime");
             entity.Property(e => e.TempNama).HasMaxLength(70);
@@ -800,6 +862,22 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.TglKirim).HasColumnType("smalldatetime");
             entity.Property(e => e.UserID).HasMaxLength(100);
             entity.Property(e => e.kode_BRGganti).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<SubPOConfirmation>(entity =>
+        {
+            entity.HasKey(e => e.id_sub_po_confirmation);
+
+            entity.ToTable("SubPOConfirmation");
+
+            entity.Property(e => e.Doku).HasMaxLength(50);
+            entity.Property(e => e.EntryDate).HasColumnType("smalldatetime");
+            entity.Property(e => e.Harga);
+            entity.Property(e => e.Jumlah);
+            entity.Property(e => e.Kode_Brg).HasMaxLength(50);
+            entity.Property(e => e.Kode_Gudang).HasMaxLength(10);
+            entity.Property(e => e.Note).HasMaxLength(255);
+            entity.Property(e => e.Total);
         });
 
         modelBuilder.Entity<SubSPB>(entity =>
@@ -1114,28 +1192,37 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK__Tx_PushSu__UserI__04E4BC85");
         });
 
-        modelBuilder.Entity<VoucherAP>(entity =>
+modelBuilder.Entity<VoucherAP>(entity =>
         {
-            entity.HasKey(e => e.PKbas).HasName("PK__VoucherA__F4637C5A6C1935A2");
+            entity.HasKey(e => e.PKbas).HasName("PK_VoucherAP");
 
             entity.ToTable("VoucherAP");
 
             entity.Property(e => e.Doku).HasMaxLength(50);
-            entity.Property(e => e.EntryDate).HasColumnType("smalldatetime");
-            entity.Property(e => e.Hapus).HasMaxLength(100);
-            entity.Property(e => e.Keterangan).HasMaxLength(255);
-            entity.Property(e => e.Kode_Bank).HasMaxLength(20);
+            entity.Property(e => e.TglDoku).HasColumnType("smalldatetime");
+            entity.Property(e => e.Kode_Supplier).HasMaxLength(20);
             entity.Property(e => e.Kode_Dept).HasMaxLength(20);
-            entity.Property(e => e.Kode_Supplier).HasMaxLength(50);
+            entity.Property(e => e.Doku_LPB).HasMaxLength(50);
+            entity.Property(e => e.Doku_PO).HasMaxLength(50);
+            entity.Property(e => e.TipeBiaya).HasMaxLength(10);
+            entity.Property(e => e.TglDokuLPB).HasColumnType("smalldatetime");
+            entity.Property(e => e.TglDokuPO).HasColumnType("smalldatetime");
+            entity.Property(e => e.TglJatuhTempo).HasColumnType("smalldatetime");
             entity.Property(e => e.Kode_Valas).HasMaxLength(12);
+            entity.Property(e => e.Keterangan).HasMaxLength(255);
+            entity.Property(e => e.STS).HasMaxLength(2);
+            entity.Property(e => e.Tipe).HasMaxLength(10);
+            entity.Property(e => e.EntryDate).HasColumnType("smalldatetime");
+            entity.Property(e => e.UserID).HasMaxLength(100);
+            entity.Property(e => e.Doku_FP).HasMaxLength(50);
+            entity.Property(e => e.Tgl_FP).HasColumnType("smalldatetime");
+            entity.Property(e => e.EFaktur).HasMaxLength(255);
+            entity.Property(e => e.Kode_IDN).HasMaxLength(50);
+            entity.Property(e => e.ModulSource).HasMaxLength(50);
+            entity.Property(e => e.MajorDiskon).HasMaxLength(20);
             entity.Property(e => e.RowVersion)
                 .IsRowVersion()
                 .IsConcurrencyToken();
-            entity.Property(e => e.STS).HasMaxLength(5);
-            entity.Property(e => e.Status).HasMaxLength(20);
-            entity.Property(e => e.StatusGL).HasMaxLength(12);
-            entity.Property(e => e.Tgl).HasColumnType("smalldatetime");
-            entity.Property(e => e.UserID).HasMaxLength(100);
         });
 
         modelBuilder.Entity<subTTP>(entity =>

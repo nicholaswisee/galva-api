@@ -33,9 +33,14 @@ public class GetPurchaseOrderByIdQueryHandler : IRequestHandler<GetPurchaseOrder
                 po.Kode_Supplier,
                 SupplierName = s != null ? s.Nama : null,
                 po.Kode_dept,
+                po.Kode_Valas,
+                po.Kurs,
                 po.Nilai,
+                po.DPPNilaiLain,
                 po.PPN,
+                po.PPnTunai,
                 po.Diskon,
+                po.Syarat,
                 po.STS,
                 po.Memo,
                 po.RowVersion
@@ -47,17 +52,45 @@ public class GetPurchaseOrderByIdQueryHandler : IRequestHandler<GetPurchaseOrder
             throw new NotFoundException($"Purchase Order '{request.Doku}' was not found.");
         }
 
+        var lines = await _context.SubPOs
+            .AsNoTracking()
+            .Where(sp => sp.Doku == request.Doku)
+            .OrderBy(sp => sp.id_sub_po)
+            .Select(sp => new PODetailLineDto(
+                sp.id_sub_po,
+                sp.Kode_Brg,
+                sp.Merk,
+                sp.Model,
+                sp.Satuan,
+                sp.Jumlah,
+                sp.Harga,
+                sp.DiscPct,
+                sp.Diskon,
+                sp.Total,
+                sp.JumlahKonfirm ?? 0,
+                sp.Kode_Gudang,
+                sp.Alias,
+                sp.Keterangan,
+                sp.TglKirim.HasValue ? sp.TglKirim.Value.ToString("yyyy-MM-dd") : null))
+            .ToListAsync(cancellationToken);
+
         return new PODetailDto(
             poRow.Doku ?? string.Empty,
             poRow.Tgl,
             poRow.Kode_Supplier,
             poRow.SupplierName,
             poRow.Kode_dept,
+            poRow.Kode_Valas,
+            poRow.Kurs,
             poRow.Nilai,
+            poRow.DPPNilaiLain,
             poRow.PPN,
+            poRow.PPnTunai,
             poRow.Diskon,
+            poRow.Syarat,
             poRow.STS,
             poRow.Memo,
-            Convert.ToBase64String(poRow.RowVersion));
+            Convert.ToBase64String(poRow.RowVersion),
+            lines);
     }
 }

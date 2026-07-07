@@ -24,17 +24,15 @@ public class GetInvoiceByIdQueryHandler : IRequestHandler<GetInvoiceByIdQuery, I
             where vap.Doku == request.Doku
             select new InvoiceDetailDto(
                 vap.Doku ?? string.Empty,
-                vap.Tgl,
+                vap.TglDoku,
                 vap.Kode_Supplier,
                 s != null ? s.Nama : null,
                 vap.Kode_Dept,
-                vap.Kode_Bank,
                 vap.Nilai,
                 vap.PPn,
                 vap.Diskon,
                 vap.Misc,
                 vap.STS,
-                vap.Status,
                 vap.Keterangan,
                 vap.RowVersion != null ? Convert.ToBase64String(vap.RowVersion) : string.Empty)
         ).FirstOrDefaultAsync(cancellationToken);

@@ -59,7 +59,7 @@ public static class AuthEndpoints
         {
             HttpOnly = true,
             Secure = ctx.Request.IsHttps,
-            SameSite = SameSiteMode.Strict,
+            SameSite = SameSiteMode.Lax,
             Path = "/",
             Expires = DateTime.UtcNow.AddDays(7),
         };

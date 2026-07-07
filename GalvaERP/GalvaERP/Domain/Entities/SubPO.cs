@@ -102,4 +102,10 @@ public partial class SubPO
     public long id_sub_po { get; set; }
 
     public string? Model { get; set; }
+
+    public string? Merk { get; set; }
+
+    public string? Satuan { get; set; }
+
+    public double? DiscPct { get; set; }
 }

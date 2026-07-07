@@ -16,8 +16,8 @@ public class CreatePaymentCommandValidator : AbstractValidator<CreatePaymentComm
         {
             item.RuleFor(x => x.Doku_LPB)
                 .NotEmpty().WithMessage("Doku_LPB is required.");
-            item.RuleFor(x => x.NilaiBayar)
-                .GreaterThan(0).WithMessage("NilaiBayar must be greater than zero.");
+            item.RuleFor(x => x.TotalNilai)
+                .GreaterThan(0).WithMessage("TotalNilai must be greater than zero.");
         });
     }
 }

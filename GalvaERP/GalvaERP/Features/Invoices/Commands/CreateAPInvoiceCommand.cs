@@ -7,7 +7,6 @@ public record CreateAPInvoiceCommand(
     string Kode_Supplier,
     DateTime Tgl,
     string? Kode_Dept,
-    string? Kode_Bank,
     double Nilai,
     double PPn,
     double Diskon,
