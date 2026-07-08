@@ -17,6 +17,8 @@ public partial class LPB
 
     public string? Doku_PO { get; set; }
 
+    public string? Doku_PCF { get; set; }
+
     public string? SuratJalan { get; set; }
 
     public DateTime? TglSuratJalan { get; set; }

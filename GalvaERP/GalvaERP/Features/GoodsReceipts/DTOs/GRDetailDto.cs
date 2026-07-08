@@ -1,9 +1,13 @@
+using System;
+using System.Collections.Generic;
+
 namespace GalvaERP.Features.GoodsReceipts.DTOs;
 
 public record GRDetailDto(
     string Doku,
     DateTime? Tgl,
     string? Doku_PO,
+    string? Doku_PCF,
     string? Kode_Supplier,
     string? SupplierName,
     string? SuratJalan,
@@ -12,4 +16,5 @@ public record GRDetailDto(
     string? STS,
     string? Status,
     string? Memo,
-    string ETag);
+    string ETag,
+    List<GRDetailLineDto> LineItems);

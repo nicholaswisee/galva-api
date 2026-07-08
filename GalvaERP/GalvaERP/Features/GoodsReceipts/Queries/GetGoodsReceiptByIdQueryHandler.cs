@@ -26,6 +26,7 @@ public class GetGoodsReceiptByIdQueryHandler : IRequestHandler<GetGoodsReceiptBy
                 lpb.Doku ?? string.Empty,
                 lpb.Tgl,
                 lpb.Doku_PO,
+                lpb.Doku_PCF,
                 lpb.Kode_Supplier,
                 s != null ? s.Nama : null,
                 lpb.SuratJalan,
@@ -34,7 +35,8 @@ public class GetGoodsReceiptByIdQueryHandler : IRequestHandler<GetGoodsReceiptBy
                 lpb.STS,
                 lpb.Status,
                 lpb.Memo,
-                lpb.RowVersion != null ? Convert.ToBase64String(lpb.RowVersion) : string.Empty)
+                lpb.RowVersion != null ? Convert.ToBase64String(lpb.RowVersion) : string.Empty,
+                new List<GRDetailLineDto>())
         ).FirstOrDefaultAsync(cancellationToken);
 
         if (result is null)
@@ -42,6 +44,19 @@ public class GetGoodsReceiptByIdQueryHandler : IRequestHandler<GetGoodsReceiptBy
             throw new NotFoundException($"Goods receipt '{request.Doku}' not found");
         }
 
-        return result;
+        var lines = await _context.SubLPBs
+            .AsNoTracking()
+            .Where(sl => sl.Doku == request.Doku)
+            .OrderBy(sl => sl.id_sub_lpb)
+            .Select(sl => new GRDetailLineDto(
+                sl.id_sub_po_confirmation ?? 0,
+                sl.Kode_Brg,
+                sl.Jumlah,
+                sl.Harga,
+                sl.Nilai,
+                sl.Kode_Gudang))
+            .ToListAsync(cancellationToken);
+
+        return result with { LineItems = lines };
     }
 }

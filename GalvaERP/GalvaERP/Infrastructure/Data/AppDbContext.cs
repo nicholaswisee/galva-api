@@ -445,6 +445,7 @@ modelBuilder.Entity<Department>(entity =>
             entity.Property(e => e.CreatedDateInWMS).HasColumnType("datetime");
             entity.Property(e => e.Doku).HasMaxLength(50);
             entity.Property(e => e.Doku_PO).HasMaxLength(50);
+            entity.Property(e => e.Doku_PCF).HasMaxLength(50);
             entity.Property(e => e.EntryDate).HasColumnType("smalldatetime");
             entity.Property(e => e.Ext_Doku_PO).HasMaxLength(50);
             entity.Property(e => e.ForwardAgent).HasMaxLength(100);
@@ -803,6 +804,8 @@ modelBuilder.Entity<SubBayar>(entity =>
 
             entity.Property(e => e.Doku).HasMaxLength(50);
             entity.Property(e => e.Doku_PO).HasMaxLength(50);
+            entity.Property(e => e.Doku_PCF).HasMaxLength(50);
+            entity.Property(e => e.id_sub_po_confirmation);
             entity.Property(e => e.Doku_SPPB).HasMaxLength(50);
             entity.Property(e => e.EntryDate).HasColumnType("smalldatetime");
             entity.Property(e => e.Estimated).HasMaxLength(50);

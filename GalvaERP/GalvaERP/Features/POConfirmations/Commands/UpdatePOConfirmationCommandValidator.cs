@@ -1,13 +1,16 @@
 using FluentValidation;
 
-namespace GalvaERP.Features.PurchaseOrders.Commands;
+namespace GalvaERP.Features.POConfirmations.Commands;
 
-public class ConfirmPurchaseOrderCommandValidator : AbstractValidator<ConfirmPurchaseOrderCommand>
+public class UpdatePOConfirmationCommandValidator : AbstractValidator<UpdatePOConfirmationCommand>
 {
-    public ConfirmPurchaseOrderCommandValidator()
+    public UpdatePOConfirmationCommandValidator()
     {
         RuleFor(x => x.Doku)
             .NotEmpty().WithMessage("Doku is required.");
+
+        RuleFor(x => x.Doku_PO)
+            .NotEmpty().WithMessage("Doku_PO is required.");
 
         RuleFor(x => x.LineItems)
             .NotEmpty().WithMessage("At least one line item is required.");

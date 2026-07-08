@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using GalvaERP.Common.Exceptions;
+using GalvaERP.Domain.Entities;
 using GalvaERP.Features.PurchaseOrders.DTOs;
 using GalvaERP.Infrastructure.Data;
 using MediatR;
@@ -21,16 +23,15 @@ public class UpdatePurchaseOrderCommandHandler : IRequestHandler<UpdatePurchaseO
 
     public async Task<PODetailDto> Handle(UpdatePurchaseOrderCommand request, CancellationToken cancellationToken)
     {
-        if (request.STS is not null && request.STS is not ("0" or "1" or "2"))
-        {
-            throw new DomainException(
-                "STS must be '0' (Pending), '1' (Confirmed), or '2' (Cancelled).");
-        }
-
         var po = await _context.POs
             .FirstOrDefaultAsync(p => p.Doku == request.Doku, cancellationToken);
 
         if (po is null)
+        {
+            throw new NotFoundException($"Purchase Order '{request.Doku}' was not found.");
+        }
+
+        if (po.Hapus == "Y")
         {
             throw new NotFoundException($"Purchase Order '{request.Doku}' was not found.");
         }
@@ -41,10 +42,74 @@ public class UpdatePurchaseOrderCommandHandler : IRequestHandler<UpdatePurchaseO
                 $"Purchase Order '{request.Doku}' was modified by another user. Please reload and try again.");
         }
 
-        if (request.STS is not null)
+        if (po.STS != "0")
         {
-            po.STS = request.STS;
+            throw new DomainException(
+                $"Purchase Order '{request.Doku}' can only be updated while STS is '0' (Pending).");
         }
+
+        po.Tgl = request.Tgl;
+        po.Kode_Supplier = request.Kode_Supplier;
+        po.Kode_dept = request.Kode_dept;
+        po.Memo = request.Memo;
+        po.Kode_Valas = request.Kode_Valas;
+        po.Kurs = request.Kurs;
+        po.Syarat = request.Syarat;
+        po.PPN = request.Ppn;
+        po.Diskon = request.Diskon;
+        po.DPPNilaiLain = request.DppNilaiLain;
+        po.PPnTunai = request.PPnTunai;
+
+        var existingLines = await _context.SubPOs
+            .Where(sp => sp.Doku == request.Doku)
+            .ToListAsync(cancellationToken);
+        _context.SubPOs.RemoveRange(existingLines);
+
+        double gross = 0d;
+        double disc = 0d;
+        var newLines = new List<SubPO>();
+
+        foreach (var line in request.LineItems)
+        {
+            var lineGross = line.Jumlah * line.Harga;
+            var lineDisc = line.Disc;
+            var lineNet = lineGross - lineDisc;
+
+            gross += lineGross;
+            disc += lineDisc;
+
+            newLines.Add(new SubPO
+            {
+                Doku = request.Doku,
+                Kode_Brg = line.Kode_Brg,
+                Merk = line.Merk,
+                Model = line.Model,
+                Satuan = line.Satuan,
+                Jumlah = line.Jumlah,
+                Harga = line.Harga,
+                DiscPct = line.DiscPct,
+                Diskon = lineDisc,
+                Total = lineNet,
+                Kode_Gudang = line.Kode_Gudang,
+                Alias = line.Alias,
+                Keterangan = line.Note,
+                TglKirim = string.IsNullOrEmpty(line.Schedule) ? null : DateTime.Parse(line.Schedule),
+                Kode_Valas = line.Kode_Valas ?? request.Kode_Valas,
+                PPN = line.Ppn,
+                Kode_Dept = request.Kode_dept,
+                Tgl = request.Tgl,
+                EntryDate = DateTime.Now
+            });
+        }
+
+        var net = gross - disc;
+        var dpp = request.DppNilaiLain > 0 ? request.DppNilaiLain : net;
+        var vat = dpp * (request.Ppn / 100d);
+        var total = dpp + vat + request.PPnTunai;
+
+        po.Nilai = total;
+
+        _context.SubPOs.AddRange(newLines);
         _context.Entry(po).Property(p => p.RowVersion).OriginalValue = request.IfMatchRowVersion;
 
         try
@@ -57,32 +122,11 @@ public class UpdatePurchaseOrderCommandHandler : IRequestHandler<UpdatePurchaseO
                 $"Purchase Order '{request.Doku}' was modified by another user. Please reload and try again.");
         }
 
-        var query =
-            from fresh in _context.POs.AsNoTracking()
-            join s in _context.Suppliers.AsNoTracking() on fresh.Kode_Supplier equals s.Kode into suppliers
-            from s in suppliers.DefaultIfEmpty()
-            where fresh.Doku == request.Doku
-            select new
-            {
-                fresh.Doku,
-                fresh.Tgl,
-                fresh.Kode_Supplier,
-                SupplierName = s != null ? s.Nama : null,
-                fresh.Kode_dept,
-                fresh.Kode_Valas,
-                fresh.Kurs,
-                fresh.Nilai,
-                fresh.DPPNilaiLain,
-                fresh.PPN,
-                fresh.PPnTunai,
-                fresh.Diskon,
-                fresh.Syarat,
-                fresh.STS,
-                fresh.Memo,
-                fresh.RowVersion
-            };
+        var refreshed = await _context.POs.AsNoTracking()
+            .FirstAsync(p => p.Doku == request.Doku, cancellationToken);
 
-        var refreshed = await query.FirstAsync(cancellationToken);
+        var supplier = await _context.Suppliers.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Kode == refreshed.Kode_Supplier, cancellationToken);
 
         var lines = await _context.SubPOs
             .AsNoTracking()
@@ -110,7 +154,7 @@ public class UpdatePurchaseOrderCommandHandler : IRequestHandler<UpdatePurchaseO
             refreshed.Doku ?? string.Empty,
             refreshed.Tgl,
             refreshed.Kode_Supplier,
-            refreshed.SupplierName,
+            supplier?.Nama,
             refreshed.Kode_dept,
             refreshed.Kode_Valas,
             refreshed.Kurs,

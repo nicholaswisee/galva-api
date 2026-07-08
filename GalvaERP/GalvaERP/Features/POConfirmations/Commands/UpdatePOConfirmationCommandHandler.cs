@@ -12,17 +12,31 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GalvaERP.Features.POConfirmations.Commands;
 
-public class CreatePOConfirmationCommandHandler : IRequestHandler<CreatePOConfirmationCommand, POConfirmationDetailDto>
+public class UpdatePOConfirmationCommandHandler : IRequestHandler<UpdatePOConfirmationCommand, POConfirmationDetailDto>
 {
     private readonly AppDbContext _context;
 
-    public CreatePOConfirmationCommandHandler(AppDbContext context)
+    public UpdatePOConfirmationCommandHandler(AppDbContext context)
     {
         _context = context;
     }
 
-    public async Task<POConfirmationDetailDto> Handle(CreatePOConfirmationCommand request, CancellationToken cancellationToken)
+    public async Task<POConfirmationDetailDto> Handle(UpdatePOConfirmationCommand request, CancellationToken cancellationToken)
     {
+        var confirmation = await _context.POConfirmations
+            .FirstOrDefaultAsync(p => p.Doku == request.Doku, cancellationToken);
+
+        if (confirmation is null)
+        {
+            throw new NotFoundException($"PO Confirmation '{request.Doku}' was not found.");
+        }
+
+        if (!confirmation.RowVersion.SequenceEqual(request.IfMatchRowVersion))
+        {
+            throw new ConcurrencyException(
+                $"PO Confirmation '{request.Doku}' was modified by another user. Please reload and try again.");
+        }
+
         var po = await _context.POs
             .FirstOrDefaultAsync(p => p.Doku == request.Doku_PO, cancellationToken);
 
@@ -33,7 +47,8 @@ public class CreatePOConfirmationCommandHandler : IRequestHandler<CreatePOConfir
 
         if (po.STS != "0")
         {
-            throw new DomainException($"Purchase Order '{request.Doku_PO}' must be Pending (STS=0) to confirm. Current STS: {po.STS}.");
+            throw new DomainException(
+                $"PO Confirmation '{request.Doku}' can only be updated while parent PO STS is '0' (Pending). Current parent STS: {po.STS}.");
         }
 
         var subPOs = await _context.SubPOs
@@ -42,43 +57,58 @@ public class CreatePOConfirmationCommandHandler : IRequestHandler<CreatePOConfir
 
         var subPOById = subPOs.ToDictionary(s => s.id_sub_po);
 
+        var oldLines = await _context.SubPOConfirmations
+            .Where(sc => sc.Doku == request.Doku)
+            .ToListAsync(cancellationToken);
+
+        // Reverse old quantities from parent SubPO.JumlahKonfirm (captured in a map first).
+        var oldQtyBySubPo = oldLines
+            .GroupBy(l => l.id_sub_po ?? 0L)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.Jumlah ?? 0d));
+
         foreach (var line in request.LineItems)
         {
             var idSubPo = line.id_sub_po ?? 0;
             if (idSubPo == 0)
             {
-                throw new DomainException("PO line (id_sub_po) is required on every line item.");
+                throw new DomainException("id_sub_po is required on every line item.");
             }
 
             if (!subPOById.TryGetValue(idSubPo, out var subPO))
             {
-                throw new DomainException($"PO line {idSubPo} was not found in Purchase Order '{request.Doku_PO}'.");
+                throw new DomainException($"PO line {idSubPo} not found.");
             }
 
             if (subPO.Kode_Brg != line.Kode_Brg)
             {
-                throw new DomainException($"PO line {idSubPo} is for item '{subPO.Kode_Brg}', not '{line.Kode_Brg}'.");
+                throw new DomainException($"Line {idSubPo} does not match item {line.Kode_Brg}.");
             }
 
             var ordered = subPO.Jumlah ?? 0;
-            var alreadyConfirmed = subPO.JumlahKonfirm ?? 0;
-            var remaining = ordered - alreadyConfirmed;
+            var currentlyConfirmed = subPO.JumlahKonfirm ?? 0;
+            oldQtyBySubPo.TryGetValue(idSubPo, out var oldQty);
+            var remaining = ordered - (currentlyConfirmed - oldQty);
             var confirmQty = line.Jumlah ?? 0;
 
             if (confirmQty > remaining + 0.0001)
             {
                 throw new DomainException(
-                    $"Confirmed quantity for item {line.Kode_Brg} exceeds the remaining PO quantity. " +
-                    $"PO='{request.Doku_PO}', line={idSubPo}, ordered={ordered}, already confirmed={alreadyConfirmed}, remaining={remaining}, requested={confirmQty}.");
+                    $"Confirmed quantity for {line.Kode_Brg} exceeds remaining PO qty. Ordered={ordered}, already confirmed by other confirmations={currentlyConfirmed - oldQty}, remaining={remaining}, requested={confirmQty}.");
             }
         }
 
-        var prefix = $"PCF-{request.Tgl:yyyyMMdd}-";
-        var todayCount = await _context.POConfirmations
-            .Where(p => p.Doku != null && p.Doku.StartsWith(prefix))
-            .CountAsync(cancellationToken);
+        // Reverse old quantities from parent SubPOs.
+        foreach (var (idSubPo, qty) in oldQtyBySubPo)
+        {
+            if (qty == 0d) continue;
+            if (subPOById.TryGetValue(idSubPo, out var subPO))
+            {
+                subPO.JumlahKonfirm = (subPO.JumlahKonfirm ?? 0) - qty;
+            }
+        }
 
-        var doku = $"{prefix}{(todayCount + 1):000}";
+        // Remove old SubPOConfirmation rows.
+        _context.SubPOConfirmations.RemoveRange(oldLines);
 
         double gross = 0d;
         double disc = 0d;
@@ -95,7 +125,7 @@ public class CreatePOConfirmationCommandHandler : IRequestHandler<CreatePOConfir
 
             confirmationLines.Add(new SubPOConfirmation
             {
-                Doku = doku,
+                Doku = request.Doku,
                 id_sub_po = idSubPo,
                 Kode_Brg = line.Kode_Brg,
                 Jumlah = line.Jumlah,
@@ -113,38 +143,39 @@ public class CreatePOConfirmationCommandHandler : IRequestHandler<CreatePOConfir
         var vat = net * 0.12d;
         var total = net + vat;
 
-        var confirmation = new POConfirmation
-        {
-            Doku = doku,
-            Tgl = request.Tgl,
-            Doku_PO = request.Doku_PO,
-            Kode_Supplier = po.Kode_Supplier,
-            Kode_dept = po.Kode_dept,
-            Kode_Valas = po.Kode_Valas,
-            Kurs = po.Kurs,
-            ContactPr = request.ContactPr,
-            Psd = request.Psd,
-            Etd = request.Etd,
-            Memo = request.Memo,
-            Nilai = total,
-            PPN = vat,
-            Diskon = disc,
-            STS = "0",
-            EntryDate = DateTime.Now
-        };
+        confirmation.Tgl = request.Tgl;
+        confirmation.Doku_PO = request.Doku_PO;
+        confirmation.Kode_Supplier = po.Kode_Supplier;
+        confirmation.Kode_dept = po.Kode_dept;
+        confirmation.Kode_Valas = po.Kode_Valas;
+        confirmation.Kurs = po.Kurs;
+        confirmation.ContactPr = request.ContactPr;
+        confirmation.Psd = request.Psd;
+        confirmation.Etd = request.Etd;
+        confirmation.Memo = request.Memo;
+        confirmation.Nilai = total;
+        confirmation.PPN = vat;
+        confirmation.Diskon = disc;
 
-        _context.POConfirmations.Add(confirmation);
         _context.SubPOConfirmations.AddRange(confirmationLines);
 
+        // Recompute parent PO STS based on all SubPOs (including any non-zero oldQty sub-pos no longer in this confirmation).
         var allFullyConfirmed = subPOs.All(s => (s.JumlahKonfirm ?? 0) >= (s.Jumlah ?? 0) - 0.0001);
-        if (allFullyConfirmed)
+        po.STS = allFullyConfirmed ? "1" : "0";
+
+        _context.Entry(confirmation).Property(p => p.RowVersion).OriginalValue = request.IfMatchRowVersion;
+
+        try
         {
-            po.STS = "1";
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConcurrencyException(
+                $"PO Confirmation '{request.Doku}' was modified by another user. Please reload and try again.");
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
-
-        return await RequeryDetail(doku, cancellationToken);
+        return await RequeryDetail(request.Doku, cancellationToken);
     }
 
     private async Task<POConfirmationDetailDto> RequeryDetail(string doku, CancellationToken cancellationToken)

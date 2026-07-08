@@ -17,56 +17,70 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
 
     public async Task<string> Handle(CreateGoodsReceiptCommand request, CancellationToken cancellationToken)
     {
-        // Validate PO exists and is Confirmed (STS = "1").
-        var po = await _context.POs
-            .FirstOrDefaultAsync(p => p.Doku == request.Doku_PO, cancellationToken);
+        // Load the PO Confirmation this GR is tied to.
+        var poConfirmation = await _context.POConfirmations
+            .FirstOrDefaultAsync(pc => pc.Doku == request.Doku_PCF, cancellationToken);
 
-        if (po is null)
+        if (poConfirmation is null)
         {
-            throw new NotFoundException("Purchase order not found: " + request.Doku_PO);
+            throw new NotFoundException($"PO Confirmation '{request.Doku_PCF}' was not found.");
         }
 
-        if (po.STS != "1")
+        if (poConfirmation.STS == "9")
         {
-            throw new DomainException("PO must be Confirmed (STS=1). Current STS: " + po.STS);
+            throw new DomainException($"PO Confirmation '{request.Doku_PCF}' is cancelled and cannot be received against.");
         }
 
-        // Aggregate PO qty per Kode_Brg so we can validate received qty.
-        var poQtyByBrg = await _context.SubPOs
-            .Where(s => s.Doku == request.Doku_PO && s.Kode_Brg != null)
-            .GroupBy(s => s.Kode_Brg!)
-            .Select(g => new
-            {
-                Kode_Brg = g.Key,
-                TotalQty = g.Sum(x => x.Jumlah ?? 0.0),
-            })
-            .ToDictionaryAsync(x => x.Kode_Brg, x => x.TotalQty, cancellationToken);
-
-        // Aggregate previously received qty per Kode_Brg from existing LPBs for this PO.
-        var previousReceiptQtyByBrg = await _context.SubLPBs
-            .Where(s => s.Doku_PO == request.Doku_PO && s.Kode_Brg != null)
-            .GroupBy(s => s.Kode_Brg!)
-            .Select(g => new
-            {
-                Kode_Brg = g.Key,
-                TotalQty = g.Sum(x => x.Jumlah ?? 0.0),
-            })
-            .ToDictionaryAsync(x => x.Kode_Brg, x => x.TotalQty, cancellationToken);
-
-        // Validate received qty ≤ PO qty per Kode_Brg.
-        var requestedByBrg = request.LineItems
-            .GroupBy(li => li.Kode_Brg)
-            .ToDictionary(g => g.Key, g => g.Sum(x => x.Jumlah));
-
-        foreach (var (kodeBrg, requestedQty) in requestedByBrg)
+        if (poConfirmation.Doku_PO != request.Doku_PO)
         {
-            var poQty = poQtyByBrg.GetValueOrDefault(kodeBrg, 0.0);
-            var alreadyReceived = previousReceiptQtyByBrg.GetValueOrDefault(kodeBrg, 0.0);
-            var newTotal = alreadyReceived + requestedQty;
-            if (newTotal > poQty + 0.0001)
+            throw new DomainException(
+                $"PO Confirmation '{request.Doku_PCF}' belongs to PO '{poConfirmation.Doku_PO}', not '{request.Doku_PO}'.");
+        }
+
+        // Load PO Confirmation lines keyed by their surrogate id.
+        var confirmationLines = await _context.SubPOConfirmations
+            .Where(sc => sc.Doku == request.Doku_PCF)
+            .ToListAsync(cancellationToken);
+
+        var confirmationLineById = confirmationLines
+            .ToDictionary(sc => sc.id_sub_po_confirmation);
+
+        // Aggregate previously received quantity per PO Confirmation line.
+        var previousReceiptByConfirmationLine = await _context.SubLPBs
+            .Where(s => s.Doku_PCF == request.Doku_PCF && s.id_sub_po_confirmation != null)
+            .GroupBy(s => s.id_sub_po_confirmation!.Value)
+            .Select(g => new
+            {
+                id_sub_po_confirmation = g.Key,
+                TotalQty = g.Sum(x => x.Jumlah ?? 0.0),
+            })
+            .ToDictionaryAsync(x => x.id_sub_po_confirmation, x => x.TotalQty, cancellationToken);
+
+        // Validate each requested line against its PO Confirmation line.
+        foreach (var item in request.LineItems)
+        {
+            if (!confirmationLineById.TryGetValue(item.id_sub_po_confirmation, out var confirmationLine))
             {
                 throw new DomainException(
-                    $"Received quantity for item {kodeBrg} exceeds PO qty. PO qty={poQty}, already received={alreadyReceived}, new requested={requestedQty}.");
+                    $"PO Confirmation line {item.id_sub_po_confirmation} was not found in '{request.Doku_PCF}'.");
+            }
+
+            if (confirmationLine.Kode_Brg != item.Kode_Brg)
+            {
+                throw new DomainException(
+                    $"PO Confirmation line {item.id_sub_po_confirmation} is for item '{confirmationLine.Kode_Brg}', not '{item.Kode_Brg}'.");
+            }
+
+            var confirmedQty = confirmationLine.Jumlah ?? 0.0;
+            var alreadyReceived = previousReceiptByConfirmationLine.GetValueOrDefault(item.id_sub_po_confirmation, 0.0);
+            var remaining = confirmedQty - alreadyReceived;
+
+            if (item.Jumlah > remaining + 0.0001)
+            {
+                throw new DomainException(
+                    $"Received quantity for item {item.Kode_Brg} exceeds the remaining confirmed quantity. " +
+                    $"PO Confirmation={request.Doku_PCF}, line={item.id_sub_po_confirmation}, " +
+                    $"confirmed={confirmedQty}, already received={alreadyReceived}, remaining={remaining}, requested={item.Jumlah}.");
             }
         }
 
@@ -85,7 +99,8 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
             Doku = doku,
             Tgl = request.Tgl,
             Doku_PO = request.Doku_PO,
-            Kode_Supplier = request.Kode_Supplier,
+            Doku_PCF = request.Doku_PCF,
+            Kode_Supplier = request.Kode_Supplier ?? poConfirmation.Kode_Supplier,
             SuratJalan = request.SuratJalan,
             Memo = request.Memo,
             STS = "0",
@@ -106,6 +121,8 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
             {
                 Doku = doku,
                 Doku_PO = request.Doku_PO,
+                Doku_PCF = request.Doku_PCF,
+                id_sub_po_confirmation = item.id_sub_po_confirmation,
                 Kode_Brg = item.Kode_Brg,
                 Jumlah = item.Jumlah,
                 Harga = item.Harga,

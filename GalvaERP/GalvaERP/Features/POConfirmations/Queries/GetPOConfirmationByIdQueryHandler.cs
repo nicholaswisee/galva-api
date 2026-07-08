@@ -26,7 +26,7 @@ public class GetPOConfirmationByIdQueryHandler : IRequestHandler<GetPOConfirmati
             from pc in _context.POConfirmations.AsNoTracking()
             join s in _context.Suppliers.AsNoTracking() on pc.Kode_Supplier equals s.Kode into suppliers
             from s in suppliers.DefaultIfEmpty()
-            where pc.Doku == request.Doku
+            where pc.Doku == request.Doku && pc.STS != "9"
             select new
             {
                 pc.Doku,
@@ -59,6 +59,7 @@ public class GetPOConfirmationByIdQueryHandler : IRequestHandler<GetPOConfirmati
             .Where(sc => sc.Doku == request.Doku)
             .OrderBy(sc => sc.id_sub_po_confirmation)
             .Select(sc => new POConfirmationLineDto(
+                sc.id_sub_po_confirmation,
                 sc.id_sub_po,
                 sc.Kode_Brg,
                 sc.Jumlah,

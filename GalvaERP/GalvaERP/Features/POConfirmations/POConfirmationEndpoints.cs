@@ -42,6 +42,102 @@ public static class POConfirmationEndpoints
             return Results.Created($"/api/po-confirmations/{detail.Doku}", detail);
         }).WithName("CreatePOConfirmation");
 
+        group.MapPut("/{*doku}", async (string doku, HttpContext ctx, IMediator mediator, CancellationToken ct) =>
+        {
+            if (!TryReadIfMatch(ctx, out var ifMatch, out var error))
+            {
+                return error!;
+            }
+
+            var body = await ctx.Request.ReadFromJsonAsync<UpdatePOConfirmationCommand>(cancellationToken: ct)
+                ?? throw new InvalidOperationException("Empty request body.");
+
+            try
+            {
+                var updated = await mediator.Send(
+                    body with { Doku = RouteParams.Decode(doku), IfMatchRowVersion = ifMatch }, ct);
+                if (updated.ETag is not null)
+                {
+                    ctx.Response.Headers["ETag"] = $"\"{updated.ETag}\"";
+                }
+                return Results.Ok(updated);
+            }
+            catch (Common.Exceptions.ConcurrencyException)
+            {
+                return Results.StatusCode(StatusCodes.Status412PreconditionFailed);
+            }
+            catch (Common.Exceptions.NotFoundException)
+            {
+                return Results.NotFound();
+            }
+            catch (Common.Exceptions.DomainException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        }).WithName("UpdatePOConfirmation");
+
+        group.MapDelete("/{*doku}", async (string doku, HttpContext ctx, IMediator mediator, CancellationToken ct) =>
+        {
+            if (!TryReadIfMatch(ctx, out var ifMatch, out var error))
+            {
+                return error!;
+            }
+
+            try
+            {
+                await mediator.Send(
+                    new DeletePOConfirmationCommand(RouteParams.Decode(doku), ifMatch), ct);
+                return Results.NoContent();
+            }
+            catch (Common.Exceptions.ConcurrencyException)
+            {
+                return Results.StatusCode(StatusCodes.Status412PreconditionFailed);
+            }
+            catch (Common.Exceptions.NotFoundException)
+            {
+                return Results.NotFound();
+            }
+            catch (Common.Exceptions.DomainException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        }).WithName("DeletePOConfirmation");
+
         return app;
+    }
+
+    private static bool TryReadIfMatch(HttpContext ctx, out byte[] rowVersion, out IResult? error)
+    {
+        rowVersion = Array.Empty<byte>();
+        error = null;
+
+        if (!ctx.Request.Headers.TryGetValue("If-Match", out var ifMatchHeader) || string.IsNullOrWhiteSpace(ifMatchHeader))
+        {
+            error = Results.Json(
+                new { error = "If-Match header with the ETag (base64 RowVersion) is required." },
+                statusCode: StatusCodes.Status428PreconditionRequired);
+            return false;
+        }
+
+        var raw = ifMatchHeader.ToString().Trim();
+        if (raw.StartsWith("\"") && raw.EndsWith("\"") && raw.Length >= 2)
+        {
+            raw = raw.Substring(1, raw.Length - 2);
+        }
+        else if (raw.StartsWith("W/\"") && raw.EndsWith("\"") && raw.Length >= 4)
+        {
+            raw = raw.Substring(3, raw.Length - 4);
+        }
+
+        try
+        {
+            rowVersion = Convert.FromBase64String(raw);
+            return true;
+        }
+        catch (FormatException)
+        {
+            error = Results.BadRequest(new { error = "If-Match header is not a valid base64 ETag." });
+            return false;
+        }
     }
 }

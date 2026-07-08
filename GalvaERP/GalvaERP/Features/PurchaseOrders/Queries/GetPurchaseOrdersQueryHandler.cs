@@ -23,7 +23,7 @@ public class GetPurchaseOrdersQueryHandler : IRequestHandler<GetPurchaseOrdersQu
             from po in _context.POs.AsNoTracking()
             join s in _context.Suppliers.AsNoTracking() on po.Kode_Supplier equals s.Kode into suppliers
             from s in suppliers.DefaultIfEmpty()
-            where po.Doku != null
+            where po.Doku != null && po.Hapus != "Y"
             orderby po.Tgl descending, po.Doku descending
             select new POListDto
             {

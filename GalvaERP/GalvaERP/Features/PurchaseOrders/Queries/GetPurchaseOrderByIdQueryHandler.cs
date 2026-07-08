@@ -25,7 +25,7 @@ public class GetPurchaseOrderByIdQueryHandler : IRequestHandler<GetPurchaseOrder
             from po in _context.POs.AsNoTracking()
             join s in _context.Suppliers.AsNoTracking() on po.Kode_Supplier equals s.Kode into suppliers
             from s in suppliers.DefaultIfEmpty()
-            where po.Doku == request.Doku
+            where po.Doku == request.Doku && po.Hapus != "Y"
             select new
             {
                 po.Doku,

@@ -24,7 +24,7 @@ public class GetPOConfirmationsQueryHandler : IRequestHandler<GetPOConfirmations
             from pc in _context.POConfirmations.AsNoTracking()
             join s in _context.Suppliers.AsNoTracking() on pc.Kode_Supplier equals s.Kode into suppliers
             from s in suppliers.DefaultIfEmpty()
-            where pc.Doku != null
+            where pc.Doku != null && pc.STS != "9"
             orderby pc.Tgl descending, pc.Doku descending
             select new POConfirmationListDto
             {

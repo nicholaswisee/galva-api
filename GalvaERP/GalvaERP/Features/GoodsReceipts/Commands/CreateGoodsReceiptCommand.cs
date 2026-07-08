@@ -5,6 +5,7 @@ namespace GalvaERP.Features.GoodsReceipts.Commands;
 
 public record CreateGoodsReceiptCommand(
     string Doku_PO,
+    string Doku_PCF,
     DateTime Tgl,
     string? Kode_Supplier,
     string? SuratJalan,
