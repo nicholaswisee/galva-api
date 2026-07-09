@@ -10,6 +10,8 @@ public record GRDetailDto(
     string? Doku_PCF,
     string? Kode_Supplier,
     string? SupplierName,
+    string? Kode_Valas,
+    double? Kurs,
     string? SuratJalan,
     double? Nilai,
     double? PPN,

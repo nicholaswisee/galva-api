@@ -29,6 +29,8 @@ public class GetGoodsReceiptByIdQueryHandler : IRequestHandler<GetGoodsReceiptBy
                 lpb.Doku_PCF,
                 lpb.Kode_Supplier,
                 s != null ? s.Nama : null,
+                lpb.Kode_Valas,
+                lpb.Kurs,
                 lpb.SuratJalan,
                 lpb.Nilai,
                 lpb.PPN,

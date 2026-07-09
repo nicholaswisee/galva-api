@@ -101,6 +101,8 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
             Doku_PO = request.Doku_PO,
             Doku_PCF = request.Doku_PCF,
             Kode_Supplier = request.Kode_Supplier ?? poConfirmation.Kode_Supplier,
+            Kode_Valas = request.Kode_Valas ?? poConfirmation.Kode_Valas,
+            Kurs = request.Kurs ?? poConfirmation.Kurs,
             SuratJalan = request.SuratJalan,
             Memo = request.Memo,
             STS = "0",

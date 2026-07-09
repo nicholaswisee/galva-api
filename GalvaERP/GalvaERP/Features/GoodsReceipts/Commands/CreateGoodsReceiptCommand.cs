@@ -8,6 +8,8 @@ public record CreateGoodsReceiptCommand(
     string Doku_PCF,
     DateTime Tgl,
     string? Kode_Supplier,
+    string? Kode_Valas,
+    double? Kurs,
     string? SuratJalan,
     string? Memo,
     List<GRLineItemDto> LineItems) : IRequest<string>;
