@@ -15,7 +15,17 @@ public partial class SubVoucherAP
 
     public string? Doku_PO { get; set; }
 
+    public string? Doku_PCF { get; set; }
+
     public string? TipeBiaya { get; set; }
+
+    public string? SourceType { get; set; }
+
+    public string? APRef { get; set; }
+
+    public string? InvoiceNo { get; set; }
+
+    public DateTime? TglInvoice { get; set; }
 
     public DateTime? TglDokuLPB { get; set; }
 
@@ -36,6 +46,10 @@ public partial class SubVoucherAP
     public double? PPnBm { get; set; }
 
     public double? Misc { get; set; }
+
+    public string? Doku_FP { get; set; }
+
+    public DateTime? Tgl_FP { get; set; }
 
     public double? NilaiLPB { get; set; }
 
