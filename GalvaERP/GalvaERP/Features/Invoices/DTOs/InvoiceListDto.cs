@@ -8,5 +8,6 @@ public class InvoiceListDto
     public string? SupplierName { get; set; }
     public double? Nilai { get; set; }
     public string? STS { get; set; }
+    public string? SourceType { get; set; }
     public string? ETag { get; set; }
 }

@@ -12,4 +12,5 @@ public record InvoiceDetailDto(
     double? Misc,
     string? STS,
     string? Keterangan,
+    string? SourceType,
     string ETag);

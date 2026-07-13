@@ -3,4 +3,4 @@ using MediatR;
 
 namespace GalvaERP.Features.Invoices.Queries;
 
-public record GetInvoicesQuery() : IRequest<List<InvoiceListDto>>;
+public record GetInvoicesQuery(string? Source = null) : IRequest<List<InvoiceListDto>>;

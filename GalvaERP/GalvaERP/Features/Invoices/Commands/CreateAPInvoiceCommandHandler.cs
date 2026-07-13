@@ -63,11 +63,16 @@ public class CreateAPInvoiceCommandHandler : IRequestHandler<CreateAPInvoiceComm
             TglDoku = request.Tgl,
             Kode_Supplier = request.Kode_Supplier,
             Kode_Dept = request.Kode_Dept,
+            Kode_Valas = request.Kode_Valas,
+            Kurs = request.Kurs,
             Nilai = request.Nilai,
             PPn = request.PPn,
             Diskon = request.Diskon,
             Misc = request.Misc,
+            Doku_FP = request.Doku_FP,
+            Tgl_FP = request.Tgl_FP,
             Keterangan = request.Keterangan,
+            SourceType = "GR",
             STS = "0",
             EntryDate = DateTime.UtcNow,
         };
@@ -79,10 +84,13 @@ public class CreateAPInvoiceCommandHandler : IRequestHandler<CreateAPInvoiceComm
             subVouchers.Add(new SubVoucherAP
             {
                 Doku = doku,
+                SourceType = "GR",
                 Doku_LPB = link.Doku_LPB,
                 NilaiLPB = link.NilaiLPB,
                 Nilai = link.NilaiLPB,
                 Kode_Supplier = request.Kode_Supplier,
+                Kode_Valas = request.Kode_Valas,
+                Kurs = request.Kurs,
                 Tgl = request.Tgl,
                 EntryDate = DateTime.UtcNow,
             });
