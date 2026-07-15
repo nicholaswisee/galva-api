@@ -22,9 +22,9 @@ public class GetInvoicesQueryHandler : IRequestHandler<GetInvoicesQuery, List<In
                         orderby vap.TglDoku descending
                         select new { vap, s };
 
-            if (!string.IsNullOrWhiteSpace(request.Source))
+            if (!string.IsNullOrWhiteSpace(request.TipeBiaya))
             {
-                query = query.Where(x => x.vap.SourceType == request.Source).OrderByDescending(x => x.vap.TglDoku);
+                query = query.Where(x => x.vap.TipeBiaya == request.TipeBiaya).OrderByDescending(x => x.vap.TglDoku);
             }
 
             var result = await query
@@ -36,7 +36,7 @@ public class GetInvoicesQueryHandler : IRequestHandler<GetInvoicesQuery, List<In
                     SupplierName = x.s != null ? x.s.Nama : null,
                     Nilai = x.vap.Nilai,
                     STS = x.vap.STS,
-                    SourceType = x.vap.SourceType,
+                    TipeBiaya = x.vap.TipeBiaya,
                     ETag = x.vap.RowVersion != null ? Convert.ToBase64String(x.vap.RowVersion) : null,
                 })
                 .ToListAsync(cancellationToken);

@@ -64,7 +64,7 @@ public class CreatePOBasedAPInvoiceCommandHandler : IRequestHandler<CreatePOBase
             PPn = request.PPn,
             NilaiLPB = request.TotalRp,
             Keterangan = request.Keterangan,
-            SourceType = "POConfirm",
+            TipeBiaya = "PO",
             STS = "0",
             EntryDate = DateTime.UtcNow,
         };
@@ -76,7 +76,7 @@ public class CreatePOBasedAPInvoiceCommandHandler : IRequestHandler<CreatePOBase
             subVouchers.Add(new SubVoucherAP
             {
                 Doku = doku,
-                SourceType = "POConfirm",
+                TipeBiaya = "PO",
                 Doku_PO = link.Doku_PO,
                 Tgl = link.Tgl ?? request.Tgl,
                 NilaiLPB = link.Amount,
@@ -92,8 +92,7 @@ public class CreatePOBasedAPInvoiceCommandHandler : IRequestHandler<CreatePOBase
             subVouchers.Add(new SubVoucherAP
             {
                 Doku = doku,
-                SourceType = "POConfirm",
-                TipeBiaya = line.TipeBiaya,
+                TipeBiaya = "PO",
                 APRef = line.APRef,
                 InvoiceNo = line.InvoiceNo,
                 TglInvoice = line.TglInvoice,

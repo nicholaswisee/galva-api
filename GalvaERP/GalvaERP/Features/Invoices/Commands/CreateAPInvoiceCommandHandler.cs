@@ -72,7 +72,7 @@ public class CreateAPInvoiceCommandHandler : IRequestHandler<CreateAPInvoiceComm
             Doku_FP = request.Doku_FP,
             Tgl_FP = request.Tgl_FP,
             Keterangan = request.Keterangan,
-            SourceType = "GR",
+            TipeBiaya = "LPB",
             STS = "0",
             EntryDate = DateTime.UtcNow,
         };
@@ -84,7 +84,7 @@ public class CreateAPInvoiceCommandHandler : IRequestHandler<CreateAPInvoiceComm
             subVouchers.Add(new SubVoucherAP
             {
                 Doku = doku,
-                SourceType = "GR",
+                TipeBiaya = "LPB",
                 Doku_LPB = link.Doku_LPB,
                 NilaiLPB = link.NilaiLPB,
                 Nilai = link.NilaiLPB,

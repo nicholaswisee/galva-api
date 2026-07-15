@@ -34,7 +34,7 @@ public class GetInvoiceByIdQueryHandler : IRequestHandler<GetInvoiceByIdQuery, I
                 vap.Misc,
                 vap.STS,
                 vap.Keterangan,
-                vap.SourceType,
+                vap.TipeBiaya,
                 vap.RowVersion != null ? Convert.ToBase64String(vap.RowVersion) : string.Empty)
         ).FirstOrDefaultAsync(cancellationToken);
 

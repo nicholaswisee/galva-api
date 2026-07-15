@@ -14,9 +14,9 @@ public static class APInvoiceEndpoints
     {
         var group = app.MapGroup("/api/invoices").WithTags("Invoices").WithOpenApi();
 
-        group.MapGet("/", async (IMediator mediator, [FromQuery] string? source = null, CancellationToken ct = default) =>
+        group.MapGet("/", async (IMediator mediator, [FromQuery] string? tipeBiaya = null, CancellationToken ct = default) =>
         {
-            var result = await mediator.Send(new GetInvoicesQuery(source), ct);
+            var result = await mediator.Send(new GetInvoicesQuery(tipeBiaya), ct);
             return Results.Ok(result);
         }).WithName("GetInvoices");
 
