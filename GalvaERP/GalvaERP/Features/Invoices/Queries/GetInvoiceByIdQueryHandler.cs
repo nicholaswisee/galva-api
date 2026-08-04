@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using GalvaERP.Common.Exceptions;
 using GalvaERP.Features.Invoices.DTOs;
 using GalvaERP.Infrastructure.Data;
@@ -22,11 +27,12 @@ public class GetInvoiceByIdQueryHandler : IRequestHandler<GetInvoiceByIdQuery, I
             join s in _context.Suppliers.AsNoTracking() on vap.Kode_Supplier equals s.Kode into suppliers
             from s in suppliers.DefaultIfEmpty()
             where vap.Doku == request.Doku
-            select new InvoiceDetailDto(
-                vap.Doku ?? string.Empty,
+            select new
+            {
+                Doku = vap.Doku ?? string.Empty,
                 vap.TglDoku,
                 vap.Kode_Supplier,
-                s != null ? s.Nama : null,
+                SupplierName = s != null ? s.Nama : null,
                 vap.Kode_Dept,
                 vap.Nilai,
                 vap.PPn,
@@ -35,7 +41,8 @@ public class GetInvoiceByIdQueryHandler : IRequestHandler<GetInvoiceByIdQuery, I
                 vap.STS,
                 vap.Keterangan,
                 vap.TipeBiaya,
-                vap.RowVersion != null ? Convert.ToBase64String(vap.RowVersion) : string.Empty)
+                RowVersion = vap.RowVersion != null ? Convert.ToBase64String(vap.RowVersion) : string.Empty
+            }
         ).FirstOrDefaultAsync(cancellationToken);
 
         if (result is null)
@@ -43,6 +50,38 @@ public class GetInvoiceByIdQueryHandler : IRequestHandler<GetInvoiceByIdQuery, I
             throw new NotFoundException($"AP invoice '{request.Doku}' not found");
         }
 
-        return result;
+        var lines = await _context.SubVoucherAPs
+            .AsNoTracking()
+            .Where(sub => sub.Doku == request.Doku)
+            .OrderBy(sub => sub.PKbas)
+            .Select(sub => new InvoiceDetailLineDto(
+                sub.PKbas,
+                sub.TipeBiaya,
+                sub.Doku_LPB,
+                sub.Doku_PO,
+                sub.NilaiLPB,
+                sub.Nilai,
+                sub.PPn,
+                sub.APRef,
+                sub.InvoiceNo,
+                sub.TglInvoice,
+                sub.Doku_FP))
+            .ToListAsync(cancellationToken);
+
+        return new InvoiceDetailDto(
+            result.Doku,
+            result.TglDoku,
+            result.Kode_Supplier,
+            result.SupplierName,
+            result.Kode_Dept,
+            result.Nilai,
+            result.PPn,
+            result.Diskon,
+            result.Misc,
+            result.STS,
+            result.Keterangan,
+            result.TipeBiaya,
+            result.RowVersion,
+            lines);
     }
 }

@@ -1,4 +1,20 @@
+using System;
+using System.Collections.Generic;
+
 namespace GalvaERP.Features.Invoices.DTOs;
+
+public record InvoiceDetailLineDto(
+    long PKbas,
+    string? TipeBiaya,
+    string? Doku_LPB,
+    string? Doku_PO,
+    double? NilaiLPB,
+    double? Nilai,
+    double? PPn,
+    string? APRef,
+    string? InvoiceNo,
+    DateTime? TglInvoice,
+    string? Doku_FP);
 
 public record InvoiceDetailDto(
     string Doku,
@@ -13,4 +29,5 @@ public record InvoiceDetailDto(
     string? STS,
     string? Keterangan,
     string? TipeBiaya,
-    string ETag);
+    string ETag,
+    List<InvoiceDetailLineDto> LineItems);
