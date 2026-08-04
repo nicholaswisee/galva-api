@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using GalvaERP.Common.Exceptions;
 using GalvaERP.Features.Payments.DTOs;
 using GalvaERP.Infrastructure.Data;
@@ -17,16 +22,17 @@ public class GetPaymentByIdQueryHandler : IRequestHandler<GetPaymentByIdQuery, P
 
     public async Task<PaymentDetailDto> Handle(GetPaymentByIdQuery request, CancellationToken cancellationToken)
     {
-        var result = await (
+var result = await (
             from b in _context.Bayars.AsNoTracking()
             join s in _context.Suppliers.AsNoTracking() on b.Kode_Supplier equals s.Kode into suppliers
             from s in suppliers.DefaultIfEmpty()
-            where b.Doku == request.Doku
-            select new PaymentDetailDto(
-                b.Doku ?? string.Empty,
+            where b.Hapus == null && b.Doku == request.Doku
+            select new
+            {
+                Doku = b.Doku ?? string.Empty,
                 b.Tgl,
                 b.Kode_Supplier,
-                s != null ? s.Nama : null,
+                SupplierName = s != null ? s.Nama : null,
                 b.Kode_BankSupplier,
                 b.Keterangan,
                 b.NilaiKas,
@@ -35,7 +41,8 @@ public class GetPaymentByIdQueryHandler : IRequestHandler<GetPaymentByIdQuery, P
                 b.STS,
                 b.Kode_Valas,
                 b.Kurs,
-                b.RowVersion != null ? Convert.ToBase64String(b.RowVersion) : string.Empty)
+                RowVersion = b.RowVersion != null ? Convert.ToBase64String(b.RowVersion) : string.Empty
+            }
         ).FirstOrDefaultAsync(cancellationToken);
 
         if (result is null)
@@ -43,6 +50,34 @@ public class GetPaymentByIdQueryHandler : IRequestHandler<GetPaymentByIdQuery, P
             throw new NotFoundException($"Payment '{request.Doku}' not found");
         }
 
-        return result;
+        var lines = await _context.SubBayars
+            .AsNoTracking()
+            .Where(sub => sub.Doku == request.Doku)
+            .OrderBy(sub => sub.PKbas)
+            .Select(sub => new PaymentDetailLineDto(
+                sub.PKbas,
+                sub.Doku_Faktur,
+                sub.Doku_LPB,
+                sub.Nilai,
+                sub.TotalNilai,
+                sub.DiskonTunai,
+                sub.Keterangan))
+            .ToListAsync(cancellationToken);
+
+        return new PaymentDetailDto(
+            result.Doku,
+            result.Tgl,
+            result.Kode_Supplier,
+            result.SupplierName,
+            result.Kode_BankSupplier,
+            result.Keterangan,
+            result.NilaiKas,
+            result.NilaiGiro,
+            result.NilMuka,
+            result.STS,
+            result.Kode_Valas,
+            result.Kurs,
+            result.RowVersion,
+            lines);
     }
 }

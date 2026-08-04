@@ -19,20 +19,15 @@ public class UpdatePaymentCommandHandler : IRequestHandler<UpdatePaymentCommand,
     public async Task<PaymentDetailDto> Handle(UpdatePaymentCommand request, CancellationToken cancellationToken)
     {
         var bayar = await _context.Bayars
-            .FirstOrDefaultAsync(b => b.Doku == request.Doku, cancellationToken);
-
+            .FirstOrDefaultAsync(b => b.Doku == request.Doku && b.Hapus == null, cancellationToken);
         if (bayar is null)
         {
             throw new NotFoundException($"Payment '{request.Doku}' not found");
         }
 
-        // Optimistic concurrency: check ETag matches current RowVersion.
-        var currentETag = Convert.ToBase64String(bayar.RowVersion);
-        if (!string.Equals(currentETag, request.ETag, StringComparison.Ordinal))
-        {
-            throw new ConcurrencyException(
-                $"Payment '{request.Doku}' was modified by another user. Please reload and retry.");
-        }
+        // Optimistic concurrency via the If-Match header (canonical pattern).
+        // Set the original RowVersion so EF Core emits the concurrency check on SaveChanges.
+        _context.Entry(bayar).Property(e => e.RowVersion).OriginalValue = request.IfMatchRowVersion;
 
         if (request.STS is not null) bayar.STS = request.STS;
         if (request.Keterangan is not null) bayar.Keterangan = request.Keterangan;
@@ -50,7 +45,7 @@ public class UpdatePaymentCommandHandler : IRequestHandler<UpdatePaymentCommand,
                 $"Payment '{request.Doku}' was modified by another user. Please reload and retry.");
         }
 
-        // Re-query to get fresh RowVersion.
+        // Re-query to get the fresh RowVersion / ETag and consistent DTO.
         var detail = await new GetPaymentByIdQueryHandler(_context)
             .Handle(new GetPaymentByIdQuery(request.Doku), cancellationToken);
 

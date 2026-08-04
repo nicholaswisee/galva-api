@@ -10,4 +10,4 @@ public record UpdatePaymentCommand(
     string? Kode_BankSupplier,
     double? NilaiKas,
     double? NilaiGiro,
-    string ETag) : IRequest<PaymentDetailDto>;
+    byte[] IfMatchRowVersion) : IRequest<PaymentDetailDto>;

@@ -18,6 +18,7 @@ public class GetPaymentsQueryHandler : IRequestHandler<GetPaymentsQuery, List<Pa
     {
         var result = await (
             from b in _context.Bayars.AsNoTracking()
+            where b.Hapus == null
             join s in _context.Suppliers.AsNoTracking() on b.Kode_Supplier equals s.Kode into suppliers
             from s in suppliers.DefaultIfEmpty()
             orderby b.Tgl descending
