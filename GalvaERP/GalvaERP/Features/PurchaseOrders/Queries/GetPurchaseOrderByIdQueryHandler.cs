@@ -42,6 +42,8 @@ public class GetPurchaseOrderByIdQueryHandler : IRequestHandler<GetPurchaseOrder
                 po.Diskon,
                 po.Syarat,
                 po.STS,
+                po.StsVerify,
+                po.TglVerify,
                 po.Memo,
                 po.RowVersion
             };
@@ -90,6 +92,8 @@ public class GetPurchaseOrderByIdQueryHandler : IRequestHandler<GetPurchaseOrder
             poRow.Syarat,
             poRow.STS,
             poRow.Memo,
+            poRow.StsVerify,
+            poRow.TglVerify,
             Convert.ToBase64String(poRow.RowVersion),
             lines);
     }

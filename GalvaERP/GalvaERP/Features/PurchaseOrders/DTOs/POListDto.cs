@@ -10,5 +10,6 @@ public class POListDto
     public string? SupplierName { get; set; }
     public double? Nilai { get; set; }
     public string? STS { get; set; }
+    public bool? StsVerify { get; set; }
     public string? ETag { get; set; }
 }

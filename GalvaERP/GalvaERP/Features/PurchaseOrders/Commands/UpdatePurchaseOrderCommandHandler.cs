@@ -166,6 +166,8 @@ public class UpdatePurchaseOrderCommandHandler : IRequestHandler<UpdatePurchaseO
             refreshed.Syarat,
             refreshed.STS,
             refreshed.Memo,
+            refreshed.StsVerify,
+            refreshed.TglVerify,
             Convert.ToBase64String(refreshed.RowVersion),
             lines);
     }

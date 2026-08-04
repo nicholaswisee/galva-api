@@ -20,5 +20,7 @@ public record PODetailDto(
     short? Syarat,
     string? STS,
     string? Memo,
+    bool? StsVerify,
+    DateTime? TglVerify,
     string ETag,
     List<PODetailLineDto> Lines);

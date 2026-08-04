@@ -33,6 +33,7 @@ public class GetPurchaseOrdersQueryHandler : IRequestHandler<GetPurchaseOrdersQu
                 SupplierName = s != null ? s.Nama : null,
                 Nilai = po.Nilai,
                 STS = po.STS,
+                StsVerify = po.StsVerify,
                 ETag = System.Convert.ToBase64String(po.RowVersion)
             };
 
