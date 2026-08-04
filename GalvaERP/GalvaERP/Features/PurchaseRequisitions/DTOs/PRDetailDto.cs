@@ -1,6 +1,16 @@
 using System;
+using System.Collections.Generic;
 
 namespace GalvaERP.Features.PurchaseRequisitions.DTOs;
+
+public record PRDetailLineDto(
+    long id_sub_spb,
+    string? Kode_Brg,
+    double? Jumlah,
+    double? Harga,
+    double? Nilai,
+    string? Kode_Gudang,
+    string? Alias);
 
 public record PRDetailDto(
     string Doku,
@@ -11,4 +21,7 @@ public record PRDetailDto(
     string? Kode_Sales,
     double? Total,
     string? Memo,
-    string ETag);
+    bool? StsVerify,
+    DateTime? TglVerify,
+    string ETag,
+    List<PRDetailLineDto> LineItems);

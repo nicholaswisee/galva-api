@@ -23,7 +23,7 @@ public class GetPurchaseRequisitionsQueryHandler : IRequestHandler<GetPurchaseRe
     {
         return await _context.SPBs
             .AsNoTracking()
-            .Where(s => s.Doku != null)
+            .Where(s => s.Doku != null && s.Hapus == null)
             .OrderByDescending(s => s.Tgl)
             .ThenByDescending(s => s.Doku)
             .Select(s => new PRListDto
@@ -32,6 +32,7 @@ public class GetPurchaseRequisitionsQueryHandler : IRequestHandler<GetPurchaseRe
                 Tgl = s.Tgl ?? DateTime.MinValue,
                 Kode_Dept = s.Kode_Dept,
                 Status = s.Status,
+                StsVerify = s.StsVerify,
                 ETag = Convert.ToBase64String(s.RowVersion)
             })
             .ToListAsync(cancellationToken);

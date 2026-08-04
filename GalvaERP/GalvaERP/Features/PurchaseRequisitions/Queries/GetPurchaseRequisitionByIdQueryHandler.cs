@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +24,7 @@ public class GetPurchaseRequisitionByIdQueryHandler : IRequestHandler<GetPurchas
     {
         var pr = await _context.SPBs
             .AsNoTracking()
-            .Where(s => s.Doku == request.Doku)
+            .Where(s => s.Doku == request.Doku && s.Hapus == null)
             .Select(s => new
             {
                 s.Doku,
@@ -34,6 +35,8 @@ public class GetPurchaseRequisitionByIdQueryHandler : IRequestHandler<GetPurchas
                 s.Kode_Sales,
                 s.Total,
                 s.MEMO,
+                s.StsVerify,
+                s.TglVerify,
                 s.RowVersion
             })
             .FirstOrDefaultAsync(cancellationToken);
@@ -42,6 +45,20 @@ public class GetPurchaseRequisitionByIdQueryHandler : IRequestHandler<GetPurchas
         {
             throw new NotFoundException($"Purchase Requisition '{request.Doku}' was not found.");
         }
+
+        var lines = await _context.SubSPBs
+            .AsNoTracking()
+            .Where(sub => sub.Doku == request.Doku && sub.Hapus == null)
+            .OrderBy(sub => sub.id_sub_spb)
+            .Select(sub => new PRDetailLineDto(
+                sub.id_sub_spb,
+                sub.Kode_Brg,
+                sub.Jumlah,
+                sub.Harga,
+                sub.Nilai,
+                sub.Kode_Gudang,
+                sub.Alias))
+            .ToListAsync(cancellationToken);
 
         return new PRDetailDto(
             pr.Doku ?? string.Empty,
@@ -52,6 +69,9 @@ public class GetPurchaseRequisitionByIdQueryHandler : IRequestHandler<GetPurchas
             pr.Kode_Sales,
             pr.Total,
             pr.MEMO,
-            Convert.ToBase64String(pr.RowVersion));
+            pr.StsVerify,
+            pr.TglVerify,
+            Convert.ToBase64String(pr.RowVersion),
+            lines);
     }
 }

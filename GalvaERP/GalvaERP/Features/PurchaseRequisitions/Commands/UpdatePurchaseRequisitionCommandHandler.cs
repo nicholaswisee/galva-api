@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using GalvaERP.Common.Exceptions;
 using GalvaERP.Features.PurchaseRequisitions.DTOs;
+using GalvaERP.Features.PurchaseRequisitions.Queries;
 using GalvaERP.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -48,19 +49,9 @@ public class UpdatePurchaseRequisitionCommandHandler : IRequestHandler<UpdatePur
                 $"Purchase Requisition '{request.Doku}' was modified by another user. Please reload and try again.");
         }
 
-        var fresh = await _context.SPBs
-            .AsNoTracking()
-            .FirstAsync(s => s.Doku == request.Doku, cancellationToken);
+        var detail = await new GetPurchaseRequisitionByIdQueryHandler(_context)
+            .Handle(new GetPurchaseRequisitionByIdQuery(request.Doku), cancellationToken);
 
-        return new PRDetailDto(
-            fresh.Doku ?? string.Empty,
-            fresh.Tgl,
-            fresh.Kode_Dept,
-            fresh.Status,
-            fresh.NPO,
-            fresh.Kode_Sales,
-            fresh.Total,
-            fresh.MEMO,
-            Convert.ToBase64String(fresh.RowVersion));
+        return detail!;
     }
 }

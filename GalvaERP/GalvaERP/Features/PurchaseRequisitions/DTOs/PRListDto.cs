@@ -8,5 +8,6 @@ public class PRListDto
     public DateTime Tgl { get; set; }
     public string? Kode_Dept { get; set; }
     public string? Status { get; set; }
+    public bool? StsVerify { get; set; }
     public string? ETag { get; set; }
 }
