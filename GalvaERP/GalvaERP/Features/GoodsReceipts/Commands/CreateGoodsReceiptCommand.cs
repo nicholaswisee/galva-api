@@ -5,11 +5,11 @@ namespace GalvaERP.Features.GoodsReceipts.Commands;
 
 public record CreateGoodsReceiptCommand(
     string Doku_PO,
-    string Doku_PCF,
     DateTime Tgl,
     string? Kode_Supplier,
     string? Kode_Valas,
     double? Kurs,
     string? SuratJalan,
     string? Memo,
-    List<GRLineItemDto> LineItems) : IRequest<string>;
+    List<GRLineItemDto> LineItems,
+    string? Doku_PCF = null) : IRequest<string>;

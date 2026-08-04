@@ -5,4 +5,5 @@ public record GRLineItemDto(
     double Jumlah,
     double Harga,
     string? Kode_Gudang,
-    long id_sub_po_confirmation);
+    long id_sub_po = 0,
+    long? id_sub_po_confirmation = null);

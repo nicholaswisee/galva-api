@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using GalvaERP.Common.Exceptions;
 using GalvaERP.Domain.Entities;
 using GalvaERP.Infrastructure.Data;
@@ -17,70 +22,76 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
 
     public async Task<string> Handle(CreateGoodsReceiptCommand request, CancellationToken cancellationToken)
     {
-        // Load the PO Confirmation this GR is tied to.
-        var poConfirmation = await _context.POConfirmations
-            .FirstOrDefaultAsync(pc => pc.Doku == request.Doku_PCF, cancellationToken);
+        // Load the PO (Purchase Order / PO Confirmation) this GR is tied to.
+        var po = await _context.POs
+            .FirstOrDefaultAsync(p => p.Doku == request.Doku_PO, cancellationToken);
 
-        if (poConfirmation is null)
+        if (po is null || po.Hapus != null)
         {
-            throw new NotFoundException($"PO Confirmation '{request.Doku_PCF}' was not found.");
+            throw new NotFoundException($"Purchase Order '{request.Doku_PO}' was not found.");
         }
 
-        if (poConfirmation.STS == "9")
+        if (po.STS == "9")
         {
-            throw new DomainException($"PO Confirmation '{request.Doku_PCF}' is cancelled and cannot be received against.");
+            throw new DomainException($"Purchase Order '{request.Doku_PO}' is cancelled and cannot be received against.");
         }
 
-        if (poConfirmation.Doku_PO != request.Doku_PO)
-        {
-            throw new DomainException(
-                $"PO Confirmation '{request.Doku_PCF}' belongs to PO '{poConfirmation.Doku_PO}', not '{request.Doku_PO}'.");
-        }
-
-        // Load PO Confirmation lines keyed by their surrogate id.
-        var confirmationLines = await _context.SubPOConfirmations
-            .Where(sc => sc.Doku == request.Doku_PCF)
+        // Load PO lines keyed by id_sub_po (or fallback by Kode_Brg)
+        var poLines = await _context.SubPOs
+            .Where(sp => sp.Doku == request.Doku_PO)
             .ToListAsync(cancellationToken);
 
-        var confirmationLineById = confirmationLines
-            .ToDictionary(sc => sc.id_sub_po_confirmation);
+        var poLineById = poLines
+            .Where(sp => sp.id_sub_po > 0)
+            .ToDictionary(sp => sp.id_sub_po);
 
-        // Aggregate previously received quantity per PO Confirmation line.
-        var previousReceiptByConfirmationLine = await _context.SubLPBs
-            .Where(s => s.Doku_PCF == request.Doku_PCF && s.id_sub_po_confirmation != null)
-            .GroupBy(s => s.id_sub_po_confirmation!.Value)
+        var poLineByKodeBrg = poLines
+            .Where(sp => !string.IsNullOrEmpty(sp.Kode_Brg))
+            .GroupBy(sp => sp.Kode_Brg!)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        // Aggregate previously received quantity per PO line
+        var previousReceiptsByPOLine = await _context.SubLPBs
+            .Where(s => s.Doku_PO == request.Doku_PO && s.Hapus == null)
+            .GroupBy(s => s.Kode_Brg)
             .Select(g => new
             {
-                id_sub_po_confirmation = g.Key,
+                Kode_Brg = g.Key,
                 TotalQty = g.Sum(x => x.Jumlah ?? 0.0),
             })
-            .ToDictionaryAsync(x => x.id_sub_po_confirmation, x => x.TotalQty, cancellationToken);
+            .ToListAsync(cancellationToken);
 
-        // Validate each requested line against its PO Confirmation line.
+        var previousReceiptMap = previousReceiptsByPOLine
+            .Where(r => !string.IsNullOrEmpty(r.Kode_Brg))
+            .ToDictionary(r => r.Kode_Brg!, r => r.TotalQty);
+
+        // Validate each requested line item against its PO line
         foreach (var item in request.LineItems)
         {
-            if (!confirmationLineById.TryGetValue(item.id_sub_po_confirmation, out var confirmationLine))
+            SubPO? poLine = null;
+            if (item.id_sub_po > 0 && poLineById.TryGetValue(item.id_sub_po, out var lineById))
             {
-                throw new DomainException(
-                    $"PO Confirmation line {item.id_sub_po_confirmation} was not found in '{request.Doku_PCF}'.");
+                poLine = lineById;
+            }
+            else if (!string.IsNullOrEmpty(item.Kode_Brg) && poLineByKodeBrg.TryGetValue(item.Kode_Brg, out var lineByCode))
+            {
+                poLine = lineByCode;
             }
 
-            if (confirmationLine.Kode_Brg != item.Kode_Brg)
+            if (poLine is null)
             {
-                throw new DomainException(
-                    $"PO Confirmation line {item.id_sub_po_confirmation} is for item '{confirmationLine.Kode_Brg}', not '{item.Kode_Brg}'.");
+                throw new DomainException($"PO line for item '{item.Kode_Brg}' was not found in PO '{request.Doku_PO}'.");
             }
 
-            var confirmedQty = confirmationLine.Jumlah ?? 0.0;
-            var alreadyReceived = previousReceiptByConfirmationLine.GetValueOrDefault(item.id_sub_po_confirmation, 0.0);
-            var remaining = confirmedQty - alreadyReceived;
+            var orderedQty = poLine.Jumlah ?? 0.0;
+            var alreadyReceived = previousReceiptMap.GetValueOrDefault(item.Kode_Brg, 0.0);
+            var remaining = orderedQty - alreadyReceived;
 
             if (item.Jumlah > remaining + 0.0001)
             {
                 throw new DomainException(
-                    $"Received quantity for item {item.Kode_Brg} exceeds the remaining confirmed quantity. " +
-                    $"PO Confirmation={request.Doku_PCF}, line={item.id_sub_po_confirmation}, " +
-                    $"confirmed={confirmedQty}, already received={alreadyReceived}, remaining={remaining}, requested={item.Jumlah}.");
+                    $"Received quantity for item '{item.Kode_Brg}' exceeds remaining order quantity. " +
+                    $"PO={request.Doku_PO}, ordered={orderedQty}, already received={alreadyReceived}, remaining={remaining}, requested={item.Jumlah}.");
             }
         }
 
@@ -93,16 +104,16 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
 
         var doku = prefix + (todayCount + 1).ToString("D3");
 
-        // Create LPB header.
+        // Create LPB header
         var lpb = new LPB
         {
             Doku = doku,
             Tgl = request.Tgl,
             Doku_PO = request.Doku_PO,
-            Doku_PCF = request.Doku_PCF,
-            Kode_Supplier = request.Kode_Supplier ?? poConfirmation.Kode_Supplier,
-            Kode_Valas = request.Kode_Valas ?? poConfirmation.Kode_Valas,
-            Kurs = request.Kurs ?? poConfirmation.Kurs,
+            Doku_PCF = request.Doku_PCF ?? request.Doku_PO,
+            Kode_Supplier = request.Kode_Supplier ?? po.Kode_Supplier,
+            Kode_Valas = request.Kode_Valas ?? po.Kode_Valas,
+            Kurs = request.Kurs ?? po.Kurs,
             SuratJalan = request.SuratJalan,
             Memo = request.Memo,
             STS = "0",
@@ -111,7 +122,7 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
             TglCreate = DateTime.UtcNow,
         };
 
-        // Create SubLPB lines and sum up the nilai.
+        // Create SubLPB lines and update SubPO.JumlahKirim
         double totalNilai = 0.0;
         var subLPBs = new List<SubLPB>();
         foreach (var item in request.LineItems)
@@ -119,12 +130,27 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
             var nilai = item.Jumlah * item.Harga;
             totalNilai += nilai;
 
+            SubPO? poLine = null;
+            if (item.id_sub_po > 0 && poLineById.TryGetValue(item.id_sub_po, out var lineById))
+            {
+                poLine = lineById;
+            }
+            else if (!string.IsNullOrEmpty(item.Kode_Brg) && poLineByKodeBrg.TryGetValue(item.Kode_Brg, out var lineByCode))
+            {
+                poLine = lineByCode;
+            }
+
+            if (poLine != null)
+            {
+                poLine.JumlahKirim = (poLine.JumlahKirim ?? 0.0) + item.Jumlah;
+            }
+
             subLPBs.Add(new SubLPB
             {
                 Doku = doku,
                 Doku_PO = request.Doku_PO,
-                Doku_PCF = request.Doku_PCF,
-                id_sub_po_confirmation = item.id_sub_po_confirmation,
+                Doku_PCF = request.Doku_PCF ?? request.Doku_PO,
+                id_sub_po_confirmation = item.id_sub_po > 0 ? item.id_sub_po : item.id_sub_po_confirmation,
                 Kode_Brg = item.Kode_Brg,
                 Jumlah = item.Jumlah,
                 Harga = item.Harga,
@@ -136,6 +162,17 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
         }
 
         lpb.Nilai = totalNilai;
+
+        // Check if all lines for the PO are fully received
+        var allFullyReceived = poLines.All(p => (p.JumlahKirim ?? 0.0) >= (p.Jumlah ?? 0.0) - 0.0001);
+        if (allFullyReceived)
+        {
+            po.STS = "2"; // Fully Received / Processed
+        }
+        else
+        {
+            po.STS = "1"; // Partially Received / Active
+        }
 
         _context.LPBs.Add(lpb);
         _context.SubLPBs.AddRange(subLPBs);
