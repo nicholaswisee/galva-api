@@ -103,6 +103,33 @@ public static class PurchaseOrderEndpoints
             }
         }).WithName("DeletePurchaseOrder");
 
+        group.MapPost("/{doku}/verify", async (string doku, HttpContext ctx, IMediator mediator, CancellationToken ct) =>
+        {
+            if (!TryReadIfMatch(ctx, out var ifMatch, out var error))
+            {
+                return error!;
+            }
+
+            try
+            {
+                await mediator.Send(
+                    new VerifyPurchaseOrderCommand(RouteParams.Decode(doku), ifMatch), ct);
+                return Results.NoContent();
+            }
+            catch (Common.Exceptions.ConcurrencyException)
+            {
+                return Results.StatusCode(StatusCodes.Status412PreconditionFailed);
+            }
+            catch (Common.Exceptions.NotFoundException)
+            {
+                return Results.NotFound();
+            }
+            catch (Common.Exceptions.DomainException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        }).WithName("VerifyPurchaseOrder");
+
         return app;
     }
 
