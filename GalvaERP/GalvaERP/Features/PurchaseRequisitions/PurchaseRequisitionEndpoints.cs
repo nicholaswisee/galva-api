@@ -76,6 +76,33 @@ public static class PurchaseRequisitionEndpoints
             }
         }).WithName("UpdatePurchaseRequisition");
 
+        group.MapPost("/{doku}/verify", async (string doku, HttpContext ctx, IMediator mediator, CancellationToken ct) =>
+        {
+            if (!TryReadIfMatch(ctx, out var ifMatch, out var error))
+            {
+                return error!;
+            }
+
+            try
+            {
+                await mediator.Send(
+                    new VerifyPurchaseRequisitionCommand(RouteParams.Decode(doku), ifMatch), ct);
+                return Results.NoContent();
+            }
+            catch (Common.Exceptions.ConcurrencyException)
+            {
+                return Results.StatusCode(StatusCodes.Status412PreconditionFailed);
+            }
+            catch (Common.Exceptions.NotFoundException)
+            {
+                return Results.NotFound();
+            }
+            catch (Common.Exceptions.DomainException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        }).WithName("VerifyPurchaseRequisition");
+
         return app;
     }
 
