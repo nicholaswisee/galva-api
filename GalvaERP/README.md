@@ -123,6 +123,7 @@ GalvaERP/
     ├── GoodsReceipts/    Commands/  DTOs/  Queries/  GoodsReceiptEndpoints.cs
     ├── Invoices/         Commands/  DTOs/  Queries/  APInvoiceEndpoints.cs
     ├── Payments/         Commands/  DTOs/  Queries/  PaymentEndpoints.cs
+    ├── PurchaseReturns/  Commands/  DTOs/  Queries/  PurchaseReturnEndpoints.cs
     └── Push/             Commands/  DTOs/  PushEndpoints.cs
 ```
 
@@ -148,11 +149,13 @@ a valid JWT access token. The full list is in the Swagger doc at
 |---|---|
 | **Auth** | `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout` |
 | **MasterData** | `GET /api/master-data/{vendors,departments,inventory,warehouses,banks}` |
-| **PurchaseRequisitions** | `GET/POST /api/purchase-requisitions`, `GET/PUT /api/purchase-requisitions/{doku}` |
-| **PurchaseOrders** | `GET/POST /api/purchase-orders`, `GET/PUT /api/purchase-orders/{doku}` |
-| **GoodsReceipts** | `GET/POST /api/goods-receipts`, `GET/PUT /api/goods-receipts/{doku}` |
-| **Invoices** | `GET/POST /api/invoices`, `GET/PUT /api/invoices/{doku}` |
+| **PurchaseRequisitions** | `GET/POST /api/purchase-requisitions`, `GET/PUT /api/purchase-requisitions/{doku}`, `POST /api/purchase-requisitions/{doku}/verify` |
+| **PurchaseOrders** | `GET/POST /api/purchase-orders`, `GET/PUT/DELETE /api/purchase-orders/{doku}`, `POST /api/purchase-orders/{doku}/verify` |
+| **POConfirmations** | `GET/POST /api/po-confirmations`, `GET /api/po-confirmations/{doku}` |
+| **GoodsReceipts** | `GET/POST /api/goods-receipts`, `GET/PUT/DELETE /api/goods-receipts/{doku}` |
+| **Invoices** | `GET/POST /api/invoices`, `POST /api/invoices/po-based`, `GET/PUT/DELETE /api/invoices/{doku}` |
 | **Payments** | `GET/POST /api/payments`, `GET/PUT /api/payments/{doku}` |
+| **PurchaseReturns** | `GET/POST /api/purchase-returns`, `GET /api/purchase-returns/eligible-lines?doku_Faktur=…`, `GET/PUT/DELETE /api/purchase-returns/{doku}` |
 | **Push** | `GET /api/push/vapid-public-key`, `POST /api/push/subscribe`, `DELETE /api/push/subscribe`, `POST /api/push/test` |
 
 Status codes: 200 on success, 201 on create, 400 on validation,
@@ -240,7 +243,7 @@ keys) must be in user-secrets, not in this file.
 | `ConnectionStrings:ErpApMockup` | SQL Server connection string | `appsettings.json` |
 | `Jwt:Issuer` | JWT `iss` claim | `appsettings.json` |
 | `Jwt:Audience` | JWT `aud` claim | `appsettings.json` |
-| `Jwt:AccessTokenExpirationMinutes` | Access-token lifetime (default 15) | `appsettings.json` |
+| `Jwt:AccessTokenExpirationMinutes` | Access-token lifetime (default 480) | `appsettings.json` |
 | `Jwt:RefreshTokenExpirationDays` | Refresh-cookie lifetime (default 7) | `appsettings.json` |
 | `Jwt:SecretKey` | HS256 signing key (**must be ≥32 chars**) | user-secrets |
 | `Cors:AllowedOrigins` | Allowed dev origins | `appsettings.json` |
