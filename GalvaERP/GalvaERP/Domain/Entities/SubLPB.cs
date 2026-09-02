@@ -15,10 +15,6 @@ public partial class SubLPB
 
     public string? Doku_PO { get; set; }
 
-    public string? Doku_PCF { get; set; }
-
-    public long? id_sub_po_confirmation { get; set; }
-
     public string? Doku_SPPB { get; set; }
 
     public short? NoUrutSPPB { get; set; }
