@@ -19,8 +19,6 @@ public partial class VoucherAP
 
     public string? Doku_PO { get; set; }
 
-    public string? Doku_PCF { get; set; }
-
     public string? NOPEN { get; set; }
 
     public DateTime? TglNopen { get; set; }

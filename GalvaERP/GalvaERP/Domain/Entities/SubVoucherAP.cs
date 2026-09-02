@@ -15,8 +15,6 @@ public partial class SubVoucherAP
 
     public string? Doku_PO { get; set; }
 
-    public string? Doku_PCF { get; set; }
-
     public string? TipeBiaya { get; set; }
 
     public string? SourceType { get; set; }
