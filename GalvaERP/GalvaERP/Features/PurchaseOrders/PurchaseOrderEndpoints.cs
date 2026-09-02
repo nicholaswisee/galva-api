@@ -15,6 +15,7 @@ public static class PurchaseOrderEndpoints
     public static IEndpointRouteBuilder MapPurchaseOrderEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/purchase-orders").WithTags("PurchaseOrders").WithOpenApi();
+        var confirmations = app.MapGroup("/api/po-confirmations").WithTags("PurchaseOrders").WithOpenApi();
 
         group.MapGet("/", async (IMediator mediator, CancellationToken ct) =>
         {
@@ -129,6 +130,30 @@ public static class PurchaseOrderEndpoints
                 return Results.Conflict(new { error = ex.Message });
             }
         }).WithName("VerifyPurchaseOrder");
+
+        confirmations.MapGet("/", async (IMediator mediator, CancellationToken ct) =>
+        {
+            var list = await mediator.Send(new GetConfirmedPurchaseOrdersQuery(), ct);
+            return Results.Ok(list);
+        }).WithName("GetConfirmedPurchaseOrders");
+
+        confirmations.MapGet("/{*doku}", async (string doku, HttpContext ctx, IMediator mediator, CancellationToken ct) =>
+        {
+            var detail = await mediator.Send(new GetConfirmedPurchaseOrderByIdQuery(RouteParams.Decode(doku)), ct);
+            if (detail is null)
+            {
+                return Results.NotFound();
+            }
+
+            ctx.Response.Headers["ETag"] = $"\"{detail.ETag}\"";
+            return Results.Ok(detail);
+        }).WithName("GetConfirmedPurchaseOrderById");
+
+        confirmations.MapPost("/", async (ConfirmPurchaseOrderCommand command, IMediator mediator, CancellationToken ct) =>
+        {
+            var doku = await mediator.Send(command, ct);
+            return Results.Created($"/api/po-confirmations/{Uri.EscapeDataString(doku)}", new { Doku = doku });
+        }).WithName("ConfirmPurchaseOrder");
 
         return app;
     }
