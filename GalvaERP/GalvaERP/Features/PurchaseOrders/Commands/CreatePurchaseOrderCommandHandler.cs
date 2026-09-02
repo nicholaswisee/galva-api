@@ -31,14 +31,14 @@ public class CreatePurchaseOrderCommandHandler : IRequestHandler<CreatePurchaseO
             throw new DomainException($"Supplier '{request.Kode_Supplier}' does not exist.");
         }
 
-        var prefix = $"PO-{request.Tgl:yyyyMMdd}-";
-        var todayCount = await _context.POs
+        var prefix = $"POS-{request.Tgl:yyyyMMdd}-";
+        var todayCount = await _context.POSems
             .Where(p => p.Doku != null && p.Doku.StartsWith(prefix))
             .CountAsync(cancellationToken);
 
         var doku = $"{prefix}{(todayCount + 1):000}";
 
-        var po = new PO
+        var po = new POSem
         {
             Doku = doku,
             Tgl = request.Tgl,
@@ -59,7 +59,7 @@ public class CreatePurchaseOrderCommandHandler : IRequestHandler<CreatePurchaseO
 
         double gross = 0d;
         double disc = 0d;
-        var subPos = new List<SubPO>();
+        var subPos = new List<SubPOSem>();
 
         foreach (var line in request.LineItems)
         {
@@ -70,7 +70,7 @@ public class CreatePurchaseOrderCommandHandler : IRequestHandler<CreatePurchaseO
             gross += lineGross;
             disc += lineDisc;
 
-            subPos.Add(new SubPO
+            subPos.Add(new SubPOSem
             {
                 Doku = doku,
                 Kode_Brg = line.Kode_Brg,
@@ -101,8 +101,8 @@ public class CreatePurchaseOrderCommandHandler : IRequestHandler<CreatePurchaseO
 
         po.Nilai = total;
 
-        _context.POs.Add(po);
-        _context.SubPOs.AddRange(subPos);
+        _context.POSems.Add(po);
+        _context.SubPOSems.AddRange(subPos);
 
         await _context.SaveChangesAsync(cancellationToken);
 
