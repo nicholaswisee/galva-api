@@ -1,12 +1,18 @@
 # Galva ERP API — Agentic Knowledge Bank
 
+> **Historical context only.** The current API contract lives in
+> [`../README.md`](../README.md) and the live `/swagger` document; the database
+> terminology lives in [`../../../galva-db/docs/AGENTIC_CONTEXT.md`](../../../galva-db/docs/AGENTIC_CONTEXT.md).
+> This audit predates the restored `POSem` and payment tables, so do not treat
+> its historical schema-drift claims as authoritative.
+>
 > **For autonomous agents.** Read this before touching any endpoint, handler,
 > DTO, or entity in `galva-api`. This document is the primary source of truth
 > for request flow, business rules, naming conventions, non-obvious facts,
 > gotchas, and the audit history that tracks schema drift from the database.
 >
 > The database schema and its terminology live in
-> [`../../galva-db/docs/AGENTIC_CONTEXT.md`](../../galva-db/docs/AGENTIC_CONTEXT.md)
+> [`../../../galva-db/docs/AGENTIC_CONTEXT.md`](../../../galva-db/docs/AGENTIC_CONTEXT.md)
 > — that document is the **canonical P2P source of truth**. Any API code,
 > DTO, or in-repo doc that disagrees with it is wrong and should be fixed.
 
@@ -563,7 +569,7 @@ Never commit real secrets.
 
 ## 15. Related Docs
 
-- [`galva-db/docs/AGENTIC_CONTEXT.md`](../../galva-db/docs/AGENTIC_CONTEXT.md)
+- [`galva-db/docs/AGENTIC_CONTEXT.md`](../../../galva-db/docs/AGENTIC_CONTEXT.md)
   — the canonical schema knowledge bank. **The authority for table/column
   facts.**
 - [`../README.md`](../README.md) — high-level API overview, quick-start,
