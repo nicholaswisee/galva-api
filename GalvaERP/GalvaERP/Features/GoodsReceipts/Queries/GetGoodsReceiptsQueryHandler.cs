@@ -26,7 +26,6 @@ public class GetGoodsReceiptsQueryHandler : IRequestHandler<GetGoodsReceiptsQuer
                 Doku = lpb.Doku ?? string.Empty,
                 Tgl = lpb.Tgl,
                 Doku_PO = lpb.Doku_PO,
-                Doku_PCF = lpb.Doku_PCF,
                 Kode_Supplier = lpb.Kode_Supplier,
                 SupplierName = s != null ? s.Nama : null,
                 Nilai = lpb.Nilai,

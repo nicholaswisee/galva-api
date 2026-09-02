@@ -26,7 +26,6 @@ public class GetGoodsReceiptByIdQueryHandler : IRequestHandler<GetGoodsReceiptBy
                 lpb.Doku ?? string.Empty,
                 lpb.Tgl,
                 lpb.Doku_PO,
-                lpb.Doku_PCF,
                 lpb.Kode_Supplier,
                 s != null ? s.Nama : null,
                 lpb.Kode_Valas,
@@ -51,7 +50,6 @@ public class GetGoodsReceiptByIdQueryHandler : IRequestHandler<GetGoodsReceiptBy
             .Where(sl => sl.Doku == request.Doku)
             .OrderBy(sl => sl.id_sub_lpb)
             .Select(sl => new GRDetailLineDto(
-                sl.id_sub_po_confirmation ?? 0,
                 sl.Kode_Brg,
                 sl.Jumlah,
                 sl.Harga,
