@@ -97,11 +97,13 @@ request/response shapes — is in the Swagger doc at
 | -------------------- | --------------------------------------------------------------------- |
 | **Auth**             | `POST /api/auth/login`, `/refresh`, `/logout`                         |
 | **MasterData**       | `GET /api/master-data/{vendors,departments,inventory,warehouses,banks}` |
-| **PurchaseRequisitions** | `GET/POST /api/purchase-requisitions`, `GET/PUT /api/purchase-requisitions/{doku}` |
-| **PurchaseOrders**   | `GET/POST /api/purchase-orders`, `GET/PUT /api/purchase-orders/{doku}` |
-| **GoodsReceipts**    | `GET/POST /api/goods-receipts`, `GET/PUT /api/goods-receipts/{doku}`  |
-| **Invoices**         | `GET/POST /api/invoices`, `GET/PUT /api/invoices/{doku}`              |
+| **PurchaseRequisitions** | `GET/POST /api/purchase-requisitions`, `GET/PUT /api/purchase-requisitions/{doku}`, `POST /api/purchase-requisitions/{doku}/verify` |
+| **PurchaseOrders**   | `GET/POST /api/purchase-orders`, `GET/PUT/DELETE /api/purchase-orders/{doku}`, `POST /api/purchase-orders/{doku}/verify` |
+| **POConfirmations**  | `GET/POST /api/po-confirmations`, `GET /api/po-confirmations/{doku}` |
+| **GoodsReceipts**    | `GET/POST /api/goods-receipts`, `GET/PUT/DELETE /api/goods-receipts/{doku}`  |
+| **Invoices**         | `GET/POST /api/invoices`, `POST /api/invoices/po-based`, `GET/PUT/DELETE /api/invoices/{doku}` |
 | **Payments**         | `GET/POST /api/payments`, `GET/PUT /api/payments/{doku}`              |
+| **PurchaseReturns**  | `GET/POST /api/purchase-returns`, `GET /api/purchase-returns/eligible-lines?doku_Faktur=…`, `GET/PUT/DELETE /api/purchase-returns/{doku}` |
 | **Push**             | `GET /api/push/vapid-public-key`, `POST/DELETE /api/push/subscribe`, `POST /api/push/test` |
 
 Status codes: 200 on success, 201 on create, 400 on validation, 401 on
