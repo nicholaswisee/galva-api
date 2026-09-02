@@ -20,7 +20,7 @@ public class GetPurchaseOrdersQueryHandler : IRequestHandler<GetPurchaseOrdersQu
     public async Task<System.Collections.Generic.List<POListDto>> Handle(GetPurchaseOrdersQuery request, CancellationToken cancellationToken)
     {
         var query =
-            from po in _context.POs.AsNoTracking()
+            from po in _context.POSems.AsNoTracking()
             join s in _context.Suppliers.AsNoTracking() on po.Kode_Supplier equals s.Kode into suppliers
             from s in suppliers.DefaultIfEmpty()
             where po.Doku != null && po.Hapus != "Y"

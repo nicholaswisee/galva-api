@@ -22,7 +22,7 @@ public class GetPurchaseOrderByIdQueryHandler : IRequestHandler<GetPurchaseOrder
     public async Task<PODetailDto?> Handle(GetPurchaseOrderByIdQuery request, CancellationToken cancellationToken)
     {
         var query =
-            from po in _context.POs.AsNoTracking()
+            from po in _context.POSems.AsNoTracking()
             join s in _context.Suppliers.AsNoTracking() on po.Kode_Supplier equals s.Kode into suppliers
             from s in suppliers.DefaultIfEmpty()
             where po.Doku == request.Doku && po.Hapus != "Y"
@@ -54,12 +54,12 @@ public class GetPurchaseOrderByIdQueryHandler : IRequestHandler<GetPurchaseOrder
             throw new NotFoundException($"Purchase Order '{request.Doku}' was not found.");
         }
 
-        var lines = await _context.SubPOs
+        var lines = await _context.SubPOSems
             .AsNoTracking()
             .Where(sp => sp.Doku == request.Doku)
-            .OrderBy(sp => sp.id_sub_po)
+            .OrderBy(sp => sp.id_sub_posem)
             .Select(sp => new PODetailLineDto(
-                sp.id_sub_po,
+                sp.id_sub_posem,
                 sp.Kode_Brg,
                 sp.Merk,
                 sp.Model,
