@@ -23,7 +23,7 @@ public class UpdatePurchaseOrderCommandHandler : IRequestHandler<UpdatePurchaseO
 
     public async Task<PODetailDto> Handle(UpdatePurchaseOrderCommand request, CancellationToken cancellationToken)
     {
-        var po = await _context.POs
+        var po = await _context.POSems
             .FirstOrDefaultAsync(p => p.Doku == request.Doku, cancellationToken);
 
         if (po is null)
@@ -48,6 +48,14 @@ public class UpdatePurchaseOrderCommandHandler : IRequestHandler<UpdatePurchaseO
                 $"Purchase Order '{request.Doku}' can only be updated while STS is '0' (Pending).");
         }
 
+        if (await _context.SubPOSems.AnyAsync(
+                line => line.Doku == request.Doku && (line.JumlahKonfirm ?? 0) > 0,
+                cancellationToken))
+        {
+            throw new DomainException(
+                $"Purchase Order '{request.Doku}' cannot be updated after a line has been confirmed.");
+        }
+
         po.Tgl = request.Tgl;
         po.Kode_Supplier = request.Kode_Supplier;
         po.Kode_dept = request.Kode_dept;
@@ -60,14 +68,14 @@ public class UpdatePurchaseOrderCommandHandler : IRequestHandler<UpdatePurchaseO
         po.DPPNilaiLain = request.DppNilaiLain;
         po.PPnTunai = request.PPnTunai;
 
-        var existingLines = await _context.SubPOs
+        var existingLines = await _context.SubPOSems
             .Where(sp => sp.Doku == request.Doku)
             .ToListAsync(cancellationToken);
-        _context.SubPOs.RemoveRange(existingLines);
+        _context.SubPOSems.RemoveRange(existingLines);
 
         double gross = 0d;
         double disc = 0d;
-        var newLines = new List<SubPO>();
+        var newLines = new List<SubPOSem>();
 
         foreach (var line in request.LineItems)
         {
@@ -78,7 +86,7 @@ public class UpdatePurchaseOrderCommandHandler : IRequestHandler<UpdatePurchaseO
             gross += lineGross;
             disc += lineDisc;
 
-            newLines.Add(new SubPO
+            newLines.Add(new SubPOSem
             {
                 Doku = request.Doku,
                 Kode_Brg = line.Kode_Brg,
@@ -109,7 +117,7 @@ public class UpdatePurchaseOrderCommandHandler : IRequestHandler<UpdatePurchaseO
 
         po.Nilai = total;
 
-        _context.SubPOs.AddRange(newLines);
+        _context.SubPOSems.AddRange(newLines);
         _context.Entry(po).Property(p => p.RowVersion).OriginalValue = request.IfMatchRowVersion;
 
         try
@@ -122,18 +130,18 @@ public class UpdatePurchaseOrderCommandHandler : IRequestHandler<UpdatePurchaseO
                 $"Purchase Order '{request.Doku}' was modified by another user. Please reload and try again.");
         }
 
-        var refreshed = await _context.POs.AsNoTracking()
+        var refreshed = await _context.POSems.AsNoTracking()
             .FirstAsync(p => p.Doku == request.Doku, cancellationToken);
 
         var supplier = await _context.Suppliers.AsNoTracking()
             .FirstOrDefaultAsync(s => s.Kode == refreshed.Kode_Supplier, cancellationToken);
 
-        var lines = await _context.SubPOs
+        var lines = await _context.SubPOSems
             .AsNoTracking()
             .Where(sp => sp.Doku == request.Doku)
-            .OrderBy(sp => sp.id_sub_po)
+            .OrderBy(sp => sp.id_sub_posem)
             .Select(sp => new PODetailLineDto(
-                sp.id_sub_po,
+                sp.id_sub_posem,
                 sp.Kode_Brg,
                 sp.Merk,
                 sp.Model,

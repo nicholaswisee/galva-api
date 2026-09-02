@@ -19,7 +19,7 @@ public class DeletePurchaseOrderCommandHandler : IRequestHandler<DeletePurchaseO
 
     public async Task<Unit> Handle(DeletePurchaseOrderCommand request, CancellationToken cancellationToken)
     {
-        var po = await _context.POs
+        var po = await _context.POSems
             .FirstOrDefaultAsync(p => p.Doku == request.Doku, cancellationToken);
 
         if (po is null || po.Hapus == "Y")
@@ -37,6 +37,14 @@ public class DeletePurchaseOrderCommandHandler : IRequestHandler<DeletePurchaseO
         {
             throw new DomainException(
                 $"Purchase Order '{request.Doku}' can only be deleted while STS is '0' (Pending).");
+        }
+
+        if (await _context.SubPOSems.AnyAsync(
+                line => line.Doku == request.Doku && (line.JumlahKonfirm ?? 0) > 0,
+                cancellationToken))
+        {
+            throw new DomainException(
+                $"Purchase Order '{request.Doku}' cannot be deleted after a line has been confirmed.");
         }
 
         po.Hapus = "Y";

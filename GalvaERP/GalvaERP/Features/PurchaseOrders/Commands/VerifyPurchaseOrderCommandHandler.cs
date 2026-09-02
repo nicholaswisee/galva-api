@@ -13,7 +13,7 @@ public class VerifyPurchaseOrderCommandHandler : IRequestHandler<VerifyPurchaseO
 
     public async Task<Unit> Handle(VerifyPurchaseOrderCommand request, CancellationToken cancellationToken)
     {
-        var po = await _context.POs
+        var po = await _context.POSems
             .FirstOrDefaultAsync(p => p.Doku == request.Doku && p.Hapus == null, cancellationToken);
         if (po is null)
         {
