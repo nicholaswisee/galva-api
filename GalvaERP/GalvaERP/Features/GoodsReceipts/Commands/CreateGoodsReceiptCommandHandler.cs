@@ -22,7 +22,6 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
 
     public async Task<string> Handle(CreateGoodsReceiptCommand request, CancellationToken cancellationToken)
     {
-        // Load the PO (Purchase Order / PO Confirmation) this GR is tied to.
         var po = await _context.POs
             .FirstOrDefaultAsync(p => p.Doku == request.Doku_PO, cancellationToken);
 
@@ -41,6 +40,18 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
             .Where(sp => sp.Doku == request.Doku_PO)
             .ToListAsync(cancellationToken);
 
+        var ambiguousSku = poLines
+            .Where(line => !string.IsNullOrEmpty(line.Kode_Brg))
+            .GroupBy(line => line.Kode_Brg!)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToList();
+        if (ambiguousSku.Count > 0)
+        {
+            throw new DomainException(
+                $"Purchase Order '{request.Doku_PO}' has duplicate item codes and cannot be received safely: {string.Join(", ", ambiguousSku)}.");
+        }
+
         var poLineById = poLines
             .Where(sp => sp.id_sub_po > 0)
             .ToDictionary(sp => sp.id_sub_po);
@@ -48,7 +59,7 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
         var poLineByKodeBrg = poLines
             .Where(sp => !string.IsNullOrEmpty(sp.Kode_Brg))
             .GroupBy(sp => sp.Kode_Brg!)
-            .ToDictionary(g => g.Key, g => g.First());
+            .ToDictionary(g => g.Key, g => g.Single());
 
         // Aggregate previously received quantity per PO line
         var previousReceiptsByPOLine = await _context.SubLPBs
@@ -65,33 +76,43 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
             .Where(r => !string.IsNullOrEmpty(r.Kode_Brg))
             .ToDictionary(r => r.Kode_Brg!, r => r.TotalQty);
 
-        // Validate each requested line item against its PO line
         foreach (var item in request.LineItems)
         {
-            SubPO? poLine = null;
-            if (item.id_sub_po > 0 && poLineById.TryGetValue(item.id_sub_po, out var lineById))
+            if (item.ResolvedSubPOId > 0)
             {
-                poLine = lineById;
-            }
-            else if (!string.IsNullOrEmpty(item.Kode_Brg) && poLineByKodeBrg.TryGetValue(item.Kode_Brg, out var lineByCode))
-            {
-                poLine = lineByCode;
-            }
+                if (!poLineById.TryGetValue(item.ResolvedSubPOId, out var lineById))
+                {
+                    throw new DomainException($"PO line {item.ResolvedSubPOId} was not found in PO '{request.Doku_PO}'.");
+                }
 
-            if (poLine is null)
+                if (!string.Equals(lineById.Kode_Brg, item.Kode_Brg, StringComparison.Ordinal))
+                {
+                    throw new DomainException(
+                        $"PO line {item.ResolvedSubPOId} does not match item '{item.Kode_Brg}'.");
+                }
+            }
+            else if (!poLineByKodeBrg.ContainsKey(item.Kode_Brg))
             {
                 throw new DomainException($"PO line for item '{item.Kode_Brg}' was not found in PO '{request.Doku_PO}'.");
             }
+        }
 
+        var requestedQtyByItem = request.LineItems
+            .GroupBy(item => item.Kode_Brg)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.Jumlah));
+
+        foreach (var (kodeBrg, requestedQty) in requestedQtyByItem)
+        {
+            var poLine = poLineByKodeBrg[kodeBrg];
             var orderedQty = poLine.Jumlah ?? 0.0;
-            var alreadyReceived = previousReceiptMap.GetValueOrDefault(item.Kode_Brg, 0.0);
+            var alreadyReceived = previousReceiptMap.GetValueOrDefault(kodeBrg, 0.0);
             var remaining = orderedQty - alreadyReceived;
 
-            if (item.Jumlah > remaining + 0.0001)
+            if (requestedQty > remaining + 0.0001)
             {
                 throw new DomainException(
-                    $"Received quantity for item '{item.Kode_Brg}' exceeds remaining order quantity. " +
-                    $"PO={request.Doku_PO}, ordered={orderedQty}, already received={alreadyReceived}, remaining={remaining}, requested={item.Jumlah}.");
+                    $"Received quantity for item '{kodeBrg}' exceeds remaining order quantity. " +
+                    $"PO={request.Doku_PO}, ordered={orderedQty}, already received={alreadyReceived}, remaining={remaining}, requested={requestedQty}.");
             }
         }
 
@@ -110,7 +131,6 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
             Doku = doku,
             Tgl = request.Tgl,
             Doku_PO = request.Doku_PO,
-            Doku_PCF = request.Doku_PCF ?? request.Doku_PO,
             Kode_Supplier = request.Kode_Supplier ?? po.Kode_Supplier,
             Kode_Valas = request.Kode_Valas ?? po.Kode_Valas,
             Kurs = request.Kurs ?? po.Kurs,
@@ -130,27 +150,15 @@ public class CreateGoodsReceiptCommandHandler : IRequestHandler<CreateGoodsRecei
             var nilai = item.Jumlah * item.Harga;
             totalNilai += nilai;
 
-            SubPO? poLine = null;
-            if (item.id_sub_po > 0 && poLineById.TryGetValue(item.id_sub_po, out var lineById))
-            {
-                poLine = lineById;
-            }
-            else if (!string.IsNullOrEmpty(item.Kode_Brg) && poLineByKodeBrg.TryGetValue(item.Kode_Brg, out var lineByCode))
-            {
-                poLine = lineByCode;
-            }
-
-            if (poLine != null)
-            {
-                poLine.JumlahKirim = (poLine.JumlahKirim ?? 0.0) + item.Jumlah;
-            }
+            var poLine = item.ResolvedSubPOId > 0
+                ? poLineById[item.ResolvedSubPOId]
+                : poLineByKodeBrg[item.Kode_Brg];
+            poLine.JumlahKirim = (poLine.JumlahKirim ?? 0.0) + item.Jumlah;
 
             subLPBs.Add(new SubLPB
             {
                 Doku = doku,
                 Doku_PO = request.Doku_PO,
-                Doku_PCF = request.Doku_PCF ?? request.Doku_PO,
-                id_sub_po_confirmation = item.id_sub_po > 0 ? item.id_sub_po : item.id_sub_po_confirmation,
                 Kode_Brg = item.Kode_Brg,
                 Jumlah = item.Jumlah,
                 Harga = item.Harga,

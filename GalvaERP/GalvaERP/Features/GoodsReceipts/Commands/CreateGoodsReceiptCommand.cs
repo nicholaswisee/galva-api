@@ -11,5 +11,4 @@ public record CreateGoodsReceiptCommand(
     double? Kurs,
     string? SuratJalan,
     string? Memo,
-    List<GRLineItemDto> LineItems,
-    string? Doku_PCF = null) : IRequest<string>;
+    List<GRLineItemDto> LineItems) : IRequest<string>;
