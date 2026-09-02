@@ -5,7 +5,6 @@ public class GRListDto
     public string Doku { get; set; } = null!;
     public DateTime? Tgl { get; set; }
     public string? Doku_PO { get; set; }
-    public string? Doku_PCF { get; set; }
     public string? Kode_Supplier { get; set; }
     public string? SupplierName { get; set; }
     public double? Nilai { get; set; }

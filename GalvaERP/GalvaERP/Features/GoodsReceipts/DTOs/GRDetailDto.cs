@@ -7,7 +7,6 @@ public record GRDetailDto(
     string Doku,
     DateTime? Tgl,
     string? Doku_PO,
-    string? Doku_PCF,
     string? Kode_Supplier,
     string? SupplierName,
     string? Kode_Valas,
